@@ -1,0 +1,15 @@
+Package: emfuncs
+Type: Package
+Title: What the Package Does in One 'Title Case' Line
+Version: 1.9
+Date: 2018-08-04
+Author: Your Name
+Maintainer: Your Name <your@email.com>
+Description: One paragraph description of what the package does as one or more full
+         sentences.
+License: GPL (>= 2)
+Imports: Rcpp (>= 0.12.18), data.table, parallel
+Depends: TMB, RcppEigen
+LinkingTo: TMB, RcppEigen, Rcpp
+NeedsCompilation: yes
+Packaged: 2019-01-17 02:59:21 UTC; danno

@@ -1,0 +1,5 @@
+useDynLib(emfuncs, .registration=TRUE)
+exportPattern("^[[:alpha:]]+")
+import(data.table)
+import(parallel)
+importFrom(Rcpp, evalCpp)
