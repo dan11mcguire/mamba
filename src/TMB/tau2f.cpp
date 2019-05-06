@@ -18,15 +18,15 @@ Type objective_function <Type>:: operator () ()
   DATA_VECTOR (b2s2 );
   DATA_VECTOR (bs22 );
   DATA_VECTOR (os22 );
-  DATA_VECTOR (gammai );
+  DATA_VECTOR (gammaj );
   
   // parameters ( input from R)
   PARAMETER ( logTau2 );
   Type tau2=exp(logTau2);
   Type nll=0; 
-  for(int i=0; i< b2s2.size(); i++) {
-    nll -= gammai(i) * (log(1/tau2) - log(os22(i) + 1/tau2) - (b2s2(i)
-                              - bs22(i)/(os22(i) + 1/tau2))) ;
+  for(int j=0; j< b2s2.size(); j++) {
+    nll -= gammaj(j) * (log(1/tau2) - log(os22(j) + 1/tau2) - (b2s2(j)
+                              - bs22(j)/(os22(j) + 1/tau2))) ;
   }
   return nll;
 }
