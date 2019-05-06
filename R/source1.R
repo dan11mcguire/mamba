@@ -276,30 +276,31 @@ mamba<-function(betajk, sjk2,
   strt<-Sys.time()
   for(iter in 1:(maxIter)){
     
-    deltaij<- mclapply(1:nrow(betajk), function(j){
-      deltis(betajk_i=betajk[j,], sjk2_i=sjk2[j,], alpha=alpha, f=f)
+    deltajk<- mclapply(1:nrow(betajk), function(j){
+      deltis(betajk_j=betajk[j,], sjk2_j=sjk2[j,], alpha=alpha, lambda=lambda)
     })
-    deltaij<-matrix(unlist(deltaij), ncol=MM, byrow=FALSE)
+    deltajk<-matrix(unlist(deltajk), ncol=MM, byrow=FALSE)
     
-    missingdelta<-unlist(mclapply(1:MM, function(j){ mean(is.na(deltaij[mis.inds[[j]],j]))}, mc.cores = parcores))
+    missingdelta<-unlist(mclapply(1:MM, function(j){ mean(is.na(deltajk[mis.inds[[j]],j]))}, mc.cores = parcores))
     if(sum(missingdelta) > 0) {
-      print("na's in deltaij")
+      print("na's in deltajk")
       break
     }
     if(verbose > 0){
-      print("deltaij calculated.")
+      print("deltajk calculated.")
     }
     if(iter==1){
       llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
-        llbR1_i(betajk_i = betajk[j,mis.inds[[j]]], sjk2_i=sjk2[j,mis.inds[[j]]], tau2inv = 1/tau2)
-      }, mc.cores=parcores)) - (k_i/2)*log(2*pi)
+        llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], sjk2_j=sjk2[j,mis.inds[[j]]], tau2inv = 1/tau2)
+      }, mc.cores=parcores)) - (k_j/2)*log(2*pi)
       
       llbR0<-unlist( mclapply(1:nrow(betajk), function(j){
-        llbR0_i(betajk_i = betajk[j,mis.inds[[j]]], sjk2_i = sjk2[j,mis.inds[[j]]], alpha = alpha, f=f)
+        llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], sjk2_j = sjk2[j,mis.inds[[j]]], 
+		alpha = alpha, lambda=lambda)
       }, mc.cores = parcores))
     }
     
-    gammai<-unlist(mclapply(1:MM, function(j){
+    gammaj<-unlist(mclapply(1:MM, function(j){
       gam<- p*exp(llbR1[j])/(exp(logsumexp(c(log(p) + llbR1[j], log(1-p) + llbR0[j]))))
       if(is.na(gam)){
         m<-which.max(c(log(1-p) + llbR0[j],
@@ -309,36 +310,33 @@ mamba<-function(betajk, sjk2,
       gam
     }, mc.cores = parcores))
     if(verbose > 1){
-      print(data.table(gammai)[order(-gammai)])
+      print(data.table(gammaj)[order(-gammaj)])
     }
     
     print("e step finished.")
     
-    if(sum(is.na(gammai)) > 0) break
-    if(sum(1-gammai)==0) break
+    if(sum(is.na(gammaj)) > 0) break
+    if(sum(1-gammaj)==0) break
     fn<-sum(unlist(mclapply(1:MM, function(j){
-      (1-gammai[j])*sum(deltaij[mis.inds[[j]],i])
+      (1-gammaj[j])*sum(deltajk[mis.inds[[j]],j])
     }, mc.cores = parcores)))
-    fd<-sum((1-gammai)*k_i)
-    f<-fn/fd
-    #f<-sum((1-gammai)*(colSums(deltaij, na.rm=TRUE))) / (sum((1-gammai)*k_i))   ## later, replace na.rm with index to sum
+    fd<-sum((1-gammaj)*k_j)
+    lambda<-fn/fd
+    #f<-sum((1-gammaj)*(colSums(deltajk, na.rm=TRUE))) / (sum((1-gammaj)*k_i))   ## later, replace na.rm with index to sum
     
-    alpha<-sum((1-gammai)*
+    alpha<-sum((1-gammaj)*
                  unlist(mclapply(1:MM, function(j){
-                   sum((1-deltaij[mis.inds[[j]],i])*(betajk[j,mis.inds[[j]]]^2 / sjk2[j,mis.inds[[j]]]))}, mc.cores = parcores)))/
-      sum((1-gammai)*unlist(mclapply(1:MM, function(j){
-        sum(1-deltaij[mis.inds[[j]],i])}, mc.cores = parcores)))
+                   sum((1-deltajk[mis.inds[[j]],j])*(betajk[j,mis.inds[[j]]]^2 / sjk2[j,mis.inds[[j]]]))}, mc.cores = parcores)))/
+      sum((1-gammaj)*unlist(mclapply(1:MM, function(j){
+        sum(1-deltajk[mis.inds[[j]],j])}, mc.cores = parcores)))
     
-    # system.time({
-    # tau2Fit<-nlminb(start=log(tau2), objective = tau2f, betajk=betajk, sjk2=sjk2,  gammai=gammai, control=list(trace=2))
-    
-    nllk <- MakeADFun ( data = list ( b2s2=b2s2, bs22=bs22, os22=os22, gammai=gammai) , 
+    nllk <- MakeADFun ( data = list ( b2s2=b2s2, bs22=bs22, os22=os22, gammaj=gammaj) , 
                         parameters = list ( logTau2=log(tau2)) , DLL="tau2f",silent=TRUE)
     fit <- nlminb ( start = nllk $par , objective = nllk $fn , gradient = nllk $gr ,
                     lower =c(- Inf ,0) , upper =c( Inf , Inf ), control = list(trace=0))
     tau2<-exp(fit$par)
     # tau2Fit2<-nlminb(start=log(tau2), objective = tau2f2, 
-    #                 b2s2=b2s2, bs22=bs22, os22=os22, gammai=gammai, 
+    #                 b2s2=b2s2, bs22=bs22, os22=os22, gammaj=gammaj, 
     #                 control=list(trace=2))
     # tau2<-exp(tau2Fit2$par)
     tau2<-max(tau2, 1e-17)
@@ -349,7 +347,7 @@ mamba<-function(betajk, sjk2,
       sum(betajk[j,mis.inds[[j]]]/sjk2[j,mis.inds[[j]]])/(sum(1/sjk2[j,mis.inds[[j]]]) + 1/tau2)
     }, mc.cores = parcores))
     
-    p<-sum(gammai)/MM
+    p<-sum(gammaj)/MM
     if(verbose > 0){
       print("m step finished.")
       print(paste0("p=", round(p, 3), " f=", round(f, 3), " tau2=", round(tau2, 8), " alpha=", round(alpha, 3)))
@@ -397,14 +395,14 @@ mamba<-function(betajk, sjk2,
   se.hat<-unlist(mclapply(1:nrow(betajk), function(j){
     sqrt(1/(sum(1/sjk2[j,mis.inds[[j]]]) + 1/tau2))
   }, mc.cores = parcores))
-  outliermat<-data.table(snp=1:ncol(deltaij),
-                         t(deltaij))
-  colnames(outliermat)[2:ncol(outliermat)]<-paste0("deltai_",1:dim(deltaij)[1])
-  outliermat[,gammai:=gammai]
-  outlierprobs<-outliermat[,#(paste0("outlier_prob", 1:dim(deltaij)[1])):=
-                           lapply(.SD, function(x){(1-gammai)*(1-x)}),
-                           .SDcols=paste0("deltai_",1:dim(deltaij)[1]), by=.(snp)]
-  colnames(outlierprobs)[2:ncol(outlierprobs)]<-paste0("outlier_prob", 1:dim(deltaij)[1])
+  outliermat<-data.table(snp=1:ncol(deltajk),
+                         t(deltajk))
+  colnames(outliermat)[2:ncol(outliermat)]<-paste0("deltai_",1:dim(deltajk)[1])
+  outliermat[,gammaj:=gammaj]
+  outlierprobs<-outliermat[,#(paste0("outlier_prob", 1:dim(deltajk)[1])):=
+                           lapply(.SD, function(x){(1-gammaj)*(1-x)}),
+                           .SDcols=paste0("deltai_",1:dim(deltajk)[1]), by=.(snp)]
+  colnames(outlierprobs)[2:ncol(outlierprobs)]<-paste0("outlier_prob", 1:dim(deltajk)[1])
   # if(!is.null(colnames(betajk))){
   #   dnames<-gsub("beta.*\\_","",colnames(betajk))
   #   
@@ -415,13 +413,13 @@ mamba<-function(betajk, sjk2,
   }
   return(list(ll=ll,
               p=p,
-              gammai=gammai,
+              gammaj=gammaj,
               alpha=alpha,
               f=f,
               tau2=tau2, 
               mu.hat=mu.hat, 
               se.hat=se.hat,
-              post.means=mu.hat*gammai,
+              post.means=mu.hat*gammaj,
               outliermat=outliermat,
               outlierprobs=outlierprobs, 
               time=end-strt,
@@ -439,7 +437,7 @@ getpvals<-function(mod, s2, nModels, nullSNPsPerModel, numcores=parcores,save_al
                            p=mod$p, f=mod$f, 
                            alpha=mod$alpha, tau2=mod$tau2,
                            parcores=numcores,verbose = TRUE)
-    nullscoresj<-nullMod[[j]]$gammai
+    nullscoresj<-nullMod[[j]]$gammaj
     nullRij<-pdat[[j]]$Ri
     nullscoresj<-nullscoresj[nullRij==0] 
     fwrite(data.table(nullscoresj),
@@ -450,11 +448,11 @@ getpvals<-function(mod, s2, nModels, nullSNPsPerModel, numcores=parcores,save_al
     system(paste0("rm ",paste0(out, "nullscores.",seed,".txt")))
     print(paste0("Model ",j, " of ", nModels, " complete.")) 
   }
-  nullscores<-unlist(lapply(nullMod, "[[", "gammai"))
+  nullscores<-unlist(lapply(nullMod, "[[", "gammaj"))
   nullRi<-unlist(lapply(pdat, "[[", "Ri"))
   nullscores<-nullscores[nullRi==0]
   
-  pvals<-sapply(mod$gammai, function(score){
+  pvals<-sapply(mod$gammaj, function(score){
     mean(score < nullscores)
   })
   if(save_all){
