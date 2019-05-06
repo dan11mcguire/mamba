@@ -5,125 +5,143 @@ loadtmb<-function(dir=getwd()){
 
 }
 
-generateData_standardized<-function(M, p, h2g, f, alpha, resref=res2ref_cpd[,sqrt(res2)], 
-                                    n=c(1192, 6613, 1829, 6181, 9607, 270820, 73331, 39480, 5459)){
-  Ri<-rbinom(M, size=1, prob=p)
-  mu<-Ri*rnorm(M, 0, sqrt(h2g/(M*p)))
+
+#M<-50000; alpha<-10
+#lambda<-0.95; tau2<-2.5e-4; p<-0.01; resref=NULL;n=rep(50*10^3,10)
+#generate_data_mamba(M,p,tau2,lambda,alpha,n=rep(50*10^3,10))
+generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10), 
+			     lambda=0.975, alpha=5){
+
+  if(missing(resref)){
+	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 resref<-res2ref_cpd[,sqrt(res2)];
+   } 
+  Rj<-rbinom(M, size=1, prob=p)
+  muj<-Rj*rnorm(M, 0, tau2)
   k<-length(n)
-  #maf<-runif(M, .05, 0.49)
-  #res.sd<-lapply(1:M, function(i){rlnorm(k, meanlog=-0.007891429, sdlog= 0.886734822)})
-  res.sd<-lapply(1:M, function(i){ sample(resref, k, replace = TRUE) })
-  sj2<-lapply(1:M, function(i){res.sd[[i]]^2 / (n)})
-  f.ind<-lapply(1:M, function(i){rbinom(k, size=1, prob=f)})
-  betaj<-lapply(1:M, function(i){Ri[i] * rnorm(k, mu[i], sd=sqrt(sj2[[i]])) + 
-      (1-Ri[i]) * ((f.ind[[i]])*rnorm(k, 0, sqrt(sj2[[i]])) + (1-f.ind[[i]])*rnorm(k, 0, sqrt(alpha)*sqrt(sj2[[i]])))})
+  res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
+  sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
+  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=lambda)})
+  betajk<-lapply(1:M, function(j){
+	Rj[j] * rnorm(k, muj[j], sd=sqrt(sjk2[[j]])) + 
+      (1-Rj[j]) * ((Ojk[[j]])*rnorm(k, 0, sqrt(sjk2[[j]])) + 
+	(1-Ojk[[j]])*rnorm(k, 0, sqrt(alpha)*sqrt(sjk2[[j]])))})
   
-  meta.z<-sapply(1:length(betaj), function(i){
-    sum(betaj[[i]]/sj2[[i]]) / sqrt(sum(1/sj2[[i]]))
+  meta.z<-sapply(1:length(betajk), function(j){
+    sum(betajk[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
-  return(list(betaj=betaj,
-              sj2=sj2,
+  return(list(betajk=betajk,
+              sjk2=sjk2,
               meta.z=meta.z, 
-              Ri=Ri, 
-              f.ind=f.ind,
-              mui=mu))
+              Rj=Rj, 
+              Ojk=Ojk,
+              muj=muj))
 }
 
-generateData_fe<-function(M, p, h2g, f, alpha, resref=res2ref_cpd[,sqrt(res2)], 
-                                    n=c(1192, 6613, 1829, 6181, 9607, 270820, 73331, 39480, 5459)){
-  Ri<-rbinom(M, size=1, prob=p)
-  mu<-Ri*rnorm(M, 0, sqrt(h2g/(M*p)))
-  k<-length(n)
- 
-  res.sd<-lapply(1:M, function(i){ sample(resref, k, replace = TRUE) })
-  sj2<-lapply(1:M, function(i){res.sd[[i]]^2 / (n)})
-  f.ind<-lapply(1:M, function(i){rbinom(k, size=1, prob=1)})
-  betaj<-lapply(1:M, function(i){
-    rnorm(k, mu[i], sd=sqrt(sj2[[i]]))
-    })
+generateData_fe<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
   
-  meta.z<-sapply(1:length(betaj), function(i){
-    sum(betaj[[i]]/sj2[[i]]) / sqrt(sum(1/sj2[[i]]))
+  if(missing(resref)){
+	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 resref<-res2ref_cpd[,sqrt(res2)];
+   } 
+  Rj<-rbinom(M, size=1, prob=p)
+  muj<-Rj*rnorm(M, 0, tau2)
+  k<-length(n)
+  res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
+  sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
+  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
+  betajk<-lapply(1:M, function(j){
+    rnorm(k, muj[j], sd=sqrt(sjk2[[j]]))
   })
-  return(list(betaj=betaj,
-              sj2=sj2,
+  
+  meta.z<-sapply(1:length(betajk), function(j){
+    sum(betajk[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
+  })
+  return(list(betajk=betajk,
+              sjk2=sjk2,
               meta.z=meta.z, 
-              Ri=Ri, 
-              f.ind=f.ind,
-              mui=mu))
+              Rj=Rj, 
+              Ojk=Ojk,
+              muj=muj))
 }
 
 
-generateData_be<-function(M, p, h2g, f, alpha, resref=res2ref_cpd[,sqrt(res2)],
-                                    n=c(1192, 6613, 1829, 6181, 9607, 270820, 73331, 39480, 5459)){
-  Ri<-rbinom(M, size=1, prob=p)
-  mu<-Ri*rnorm(M, 0, sqrt(h2g/(M*p)))
+generateData_be<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
+  if(missing(resref)){
+	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 resref<-res2ref_cpd[,sqrt(res2)];
+   } 
+  Rj<-rbinom(M, size=1, prob=p)
+  muj<-Rj*rnorm(M, 0, tau2)
   k<-length(n)
-  res.sd<-lapply(1:M, function(i){ sample(resref, k, replace = TRUE) })
-  sj2<-lapply(1:M, function(i){res.sd[[i]]^2 / (n)})
-  f.ind<-lapply(1:M, function(i){rbinom(k, size=1, prob=1)})
-  Nei<-sapply(1:M, function(i){ Ri[i]*sample(1:k, 1) })
-  bei<-lapply(1:M, function(i){
+  res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
+  sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
+  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
+  Nej<-sapply(1:M, function(j){ Rj[j]*sample(1:k, 1) })
+  bej<-lapply(1:M, function(j){
     be<-rep(0, k)
-    if(Nei[i] > 0){
-      be[sample(1:k, Nei[i])]<-1
+    if(Nej[j] > 0){
+      be[sample(1:k, Nej[j])]<-1
     }
      return(be)
   })
   
-  betaj<-lapply(1:M, function(i){bei[[i]] * rnorm(k, mu[i], sd=sqrt(sj2[[i]])) + 
-      (1-bei[[i]]) *rnorm(k, 0, sqrt(sj2[[i]]))
+  betajk<-lapply(1:M, function(j){bej[[j]] * rnorm(k, muj[j], sd=sqrt(sjk2[[j]])) + 
+      (1-bej[[j]]) *rnorm(k, 0, sqrt(sjk2[[j]]))
   })
   
-  meta.z<-sapply(1:length(betaj), function(i){
-    sum(betaj[[i]]/sj2[[i]]) / sqrt(sum(1/sj2[[i]]))
+  meta.z<-sapply(1:length(betajk), function(j){
+    sum(betajk[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
-  return(list(betaj=betaj,
-              sj2=sj2,
+  return(list(betajk=betajk,
+              sjk2=sjk2,
               meta.z=meta.z, 
-              Ri=Ri, 
-              f.ind=f.ind,
-              mui=mu, 
-              Nei=Nei,
-              bei=bei))
+              Rj=Rj, 
+              Ojk=Ojk,
+              muj=muj, 
+              Nej=Nej,
+              bej=bej))
 }
 
 
-generateData_re1<-function(M, p, h2g, f, alpha, I2=0.3,resref=res2ref_cpd[,sqrt(res2)], 
-                           n=c(1192, 6613, 1829, 6181, 9607, 270820, 73331, 39480, 5459)){
+generateData_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
   
-  Ri<-rbinom(M, size=1, prob=p)
-  mu<-Ri*rnorm(M, 0, sqrt(h2g/(M*p)))
+  if(missing(resref)){
+	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 resref<-res2ref_cpd[,sqrt(res2)];
+   } 
+  Rj<-rbinom(M, size=1, prob=p)
+  muj<-Rj*rnorm(M, 0, tau2)
   k<-length(n)
-  res.sd<-lapply(1:M, function(i){ sample(resref, k, replace = TRUE) })
-  sj2<-lapply(1:M, function(i){res.sd[[i]]^2 / (n)})
-  f.ind<-lapply(1:M, function(i){rbinom(k, size=1, prob=1)})
-  S2i<-sapply(1:M, function(i){
-    ((k-1)*sum(1/sj2[[i]]))/(sum(1/sj2[[i]])^2 - sum(1/sj2[[i]]^2))
+  res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
+  sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
+  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
+  S2j<-sapply(1:M, function(j){
+    ((k-1)*sum(1/sjk2[[j]]))/(sum(1/sjk2[[j]])^2 - sum(1/sjk2[[j]]^2))
   })
-  omega2i<-sapply(1:M, function(i){
-    I2/(1-I2) * S2i[i]
+  omega2j<-sapply(1:M, function(j){
+    I2/(1-I2) * S2j[j]
   })
-  etaij<-lapply(1:M, function(i){
-    rnorm(k, mu[i], sd=sqrt(omega2i[i])) 
-  })
-  
-  betaj<-lapply(1:M, function(i){
-    rnorm(k, etaij[[i]], sd=sqrt(sj2[[i]]))
+  etajk<-lapply(1:M, function(j){
+    rnorm(k, muj[j], sd=sqrt(omega2j[j])) 
   })
   
-  meta.z<-sapply(1:length(betaj), function(i){
-    sum(betaj[[i]]/sj2[[i]]) / sqrt(sum(1/sj2[[i]]))
+  betaj<-lapply(1:M, function(j){
+    rnorm(k, etajk[[j]], sd=sqrt(sjk2[[j]]))
   })
-  return(list(betaj=betaj,
-              sj2=sj2,
+  
+  meta.z<-sapply(1:length(betaj), function(j){
+    sum(betaj[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
+  })
+  return(list(betajk=betajk,
+              sjk2=sjk2,
               meta.z=meta.z, 
-              etaij=etaij,
-              omega2i=omega2i,
-              S2i=S2i,
-              Ri=Ri, 
-              f.ind=f.ind,
-              mui=mu))
+              etajk=etajk,
+              omega2j=omega2j,
+              S2j=S2j,
+              Rj=Rj, 
+              Ojk=Ojk,
+              muj=muj))
 }
 
 ### only heterogeneity under the alternative
@@ -133,35 +151,35 @@ generateData_re2<-function(M, p, h2g, f, alpha, I2=0.3,resref=res2ref_cpd[,sqrt(
   Ri<-rbinom(M, size=1, prob=p)
   mu<-Ri*rnorm(M, 0, sqrt(h2g/(M*p)))
   k<-length(n)
-  res.sd<-lapply(1:M, function(i){ sample(resref, k, replace = TRUE) })
-  sj2<-lapply(1:M, function(i){res.sd[[i]]^2 / (n)})
-  f.ind<-lapply(1:M, function(i){rbinom(k, size=1, prob=1)})
-  S2i<-sapply(1:M, function(i){
-    ((k-1)*sum(1/sj2[[i]]))/(sum(1/sj2[[i]])^2 - sum(1/sj2[[i]]^2))
+  res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
+  sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
+  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
+  S2j<-sapply(1:M, function(j){
+    ((k-1)*sum(1/sjk2[[j]]))/(sum(1/sjk2[[j]])^2 - sum(1/sjk2[[j]]^2))
   })
-  omega2i<-sapply(1:M, function(i){
-    I2/(1-I2) * S2i[i]
+  omega2i<-sapply(1:M, function(j){
+    I2/(1-I2) * S2j[j]
   })
-  etaij<-lapply(1:M, function(i){
-   Ri[i] * rnorm(k, mu[i], sd=sqrt(omega2i[i])) 
-  })
-  
-  betaj<-lapply(1:M, function(i){
-    rnorm(k, etaij[[i]], sd=sqrt(sj2[[i]]))
+  etajk<-lapply(1:M, function(j){
+   Ri[j] * rnorm(k, mu[j], sd=sqrt(omega2i[j])) 
   })
   
+  betaj<-lapply(1:M, function(j){
+    rnorm(k, etajk[[j]], sd=sqrt(sjk2[[j]]))
+  })
   
-  meta.z<-sapply(1:length(betaj), function(i){
-    sum(betaj[[i]]/sj2[[i]]) / sqrt(sum(1/sj2[[i]]))
+  
+  meta.z<-sapply(1:length(betaj), function(j){
+    sum(betaj[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
   return(list(betaj=betaj,
-              sj2=sj2,
+              sjk2=sjk2,
               meta.z=meta.z, 
-              etaij=etaij,
+              etajk=etajk,
               omega2i=omega2i,
-              S2i=S2i,
+              S2j=S2j,
               Ri=Ri, 
-              f.ind=f.ind,
+              Ojk=Ojk,
               mui=mu))
 }
 
@@ -177,36 +195,36 @@ generateData_t_re<-function(M, p, h2g, I2=0.3, resref=res2ref_cpd[,sqrt(res2)], 
   #ui<-rt(200, df=3)
   #ui<-var(ui/sqrt(3/var_ui_target))
   #nu<-re.p*tau2/(re.p*tau2 + re.p - 1 )
-  #res.sd<-lapply(1:M, function(i){rlnorm(k, meanlog=-0.007891429, sdlog= 0.886734822)})
-  res.sd<-lapply(1:M, function(i){ sample(resref, k, replace = TRUE) })
-  sj2<-lapply(1:M, function(i){res.sd[[i]]^2 / (n)})
-  f.ind<-lapply(1:M, function(i){rbinom(k, size=1, prob=1)})
+  #res.sd<-lapply(1:M, function(j){rlnorm(k, meanlog=-0.007891429, sdlog= 0.886734822)})
+  res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
+  sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
+  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
   
-  S2i<-sapply(1:M, function(i){
-    ((k-1)*sum(1/sj2[[i]]))/(sum(1/sj2[[i]])^2 - sum(1/sj2[[i]]^2))
+  S2j<-sapply(1:M, function(j){
+    ((k-1)*sum(1/sjk2[[j]]))/(sum(1/sjk2[[j]])^2 - sum(1/sjk2[[j]]^2))
   })
-  omega2i<-sapply(1:M, function(i){
-    I2/(1-I2) * S2i[i]
+  omega2i<-sapply(1:M, function(j){
+    I2/(1-I2) * S2j[j]
   })
-  etaij<-lapply(1:M, function(i){
-    Ri[i] * rt(k, ncp=mu[i], df=2*(1-omega2i[i])/omega2i[i]) 
-  })
-  
-  betaj<-lapply(1:M, function(i){
-    rnorm(k, mean=etaij[[i]], sd=sqrt(sj2[[i]]))
+  etajk<-lapply(1:M, function(j){
+    Ri[j] * rt(k, ncp=mu[j], df=2*(1-omega2i[j])/omega2i[j]) 
   })
   
-  meta.z<-sapply(1:length(betaj), function(i){
-    sum(betaj[[i]]/sj2[[i]]) / sqrt(sum(1/sj2[[i]]))
+  betaj<-lapply(1:M, function(j){
+    rnorm(k, mean=etajk[[j]], sd=sqrt(sjk2[[j]]))
+  })
+  
+  meta.z<-sapply(1:length(betaj), function(j){
+    sum(betaj[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
   return(list(betaj=betaj,
-              sj2=sj2,
+              sjk2=sjk2,
               meta.z=meta.z, 
-              etaij=etaij,
+              etajk=etajk,
               omega2i=omega2i,
-              S2i=S2i,
+              S2j=S2j,
               Ri=Ri, 
-              f.ind=f.ind,
+              Ojk=Ojk,
               mui=mu))
 }
 
@@ -222,33 +240,33 @@ generateData_t_noisy<-function(M, p, h2g, re.p=0.3, resref=res2ref_cpd[,sqrt(res
   #ui<-rt(200, df=3)
   #ui<-var(ui/sqrt(3/var_ui_target))
   #nu<-re.p*tau2/(re.p*tau2 + re.p - 1 )
-  #res.sd<-lapply(1:M, function(i){rlnorm(k, meanlog=-0.007891429, sdlog= 0.886734822)})
-  res.sd<-lapply(1:M, function(i){ sample(resref, k, replace = TRUE) })
-  sj2<-lapply(1:M, function(i){res.sd[[i]]^2 / (n)})
-  uij<-lapply(1:M, function(i){
-    var_ui_target<-sj2[[i]]*re.p/(1-re.p) 
+  #res.sd<-lapply(1:M, function(j){rlnorm(k, meanlog=-0.007891429, sdlog= 0.886734822)})
+  res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
+  sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
+  uij<-lapply(1:M, function(j){
+    var_ui_target<-sjk2[[j]]*re.p/(1-re.p) 
     rt(k, df=3) / sqrt(3/var_ui_target)
   })
-  f.ind<-lapply(1:M, function(i){rbinom(k, size=1, prob=1)})
+  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
   
-  betaj<-lapply(1:M, function(i){
-    etaij<-mu[i] + uij[[i]]
-    rnorm(k, mean=etaij, sd=sqrt(sj2[[i]]))
+  betaj<-lapply(1:M, function(j){
+    etajk<-mu[j] + uij[[j]]
+    rnorm(k, mean=etajk, sd=sqrt(sjk2[[j]]))
   })
   
-  meta.z<-sapply(1:length(betaj), function(i){
-    sum(betaj[[i]]/sj2[[i]]) / sqrt(sum(1/sj2[[i]]))
+  meta.z<-sapply(1:length(betaj), function(j){
+    sum(betaj[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
   return(list(betaj=betaj,
-              sj2=sj2,
+              sjk2=sjk2,
               uij=uij,
               meta.z=meta.z, 
-              f.ind=f.ind,
+              Ojk=Ojk,
               Ri=Ri, 
               mui=mu))
 }
 
-em_std_f<-function(betaij, sij2, 
+em_std_f<-function(betajk, sij2, 
                    parcores=1, 
                    p=0.003,
                    f=0.96,
@@ -259,60 +277,60 @@ em_std_f<-function(betaij, sij2,
                    verbose=1,
                    snpids=NA,
                    maxIter=10^4L){
-  betaij<-as.matrix(betaij)
+  betajk<-as.matrix(betajk)
   sij2<-as.matrix(sij2)
   
-  zeroL<-mclapply(1:nrow(sij2), function(i){
+  zeroL<-mclapply(1:nrow(sij2), function(j){
     which(sij2[i,]==0)
   }, mc.cores = parcores)
  chk<- which(sapply(zeroL, length) > 0)
   if(length(chk) > 0){
     for(i in chk){
-      sij2[i,zeroL[[i]]]<-NA
-      betaij[i,zeroL[[i]]]<-NA
+      sij2[i,zeroL[[j]]]<-NA
+      betajk[i,zeroL[[j]]]<-NA
     }
   }
- infL<-mclapply(1:nrow(sij2), function(i){
+ infL<-mclapply(1:nrow(sij2), function(j){
    which(is.infinite(sij2[i,]))
  }, mc.cores = parcores)
  chk<- which(sapply(infL, length) > 0)
  if(length(chk) > 0){
    for(i in chk){
-     sij2[i,infL[[i]]]<-NA
-     betaij[i,infL[[i]]]<-NA
+     sij2[i,infL[[j]]]<-NA
+     betajk[i,infL[[j]]]<-NA
    }
  }
- infL<-mclapply(1:nrow(betaij), function(i){
-   which(is.infinite(betaij[i,]))
+ infL<-mclapply(1:nrow(betajk), function(j){
+   which(is.infinite(betajk[i,]))
  }, mc.cores = parcores)
  chk<- which(sapply(infL, length) > 0)
  if(length(chk) > 0){
    for(i in chk){
-     sij2[i,infL[[i]]]<-NA
-     betaij[i,infL[[i]]]<-NA
+     sij2[i,infL[[j]]]<-NA
+     betajk[i,infL[[j]]]<-NA
    }
  }
-  mis.inds<-mclapply(1:nrow(sij2), function(i){
+  mis.inds<-mclapply(1:nrow(sij2), function(j){
     which(!is.na(sij2[i,]))
   }, mc.cores = parcores)
   
   
-  b2s2<-sapply(1:nrow(betaij), function(i){
-    sum(betaij[i,mis.inds[[i]]]^2/sij2[i,mis.inds[[i]]])
+  b2s2<-sapply(1:nrow(betajk), function(j){
+    sum(betajk[i,mis.inds[[j]]]^2/sij2[i,mis.inds[[j]]])
   })
-  bs22<-sapply(1:nrow(betaij), function(i){
-    sum(betaij[i,mis.inds[[i]]]/sij2[i,mis.inds[[i]]])^2
+  bs22<-sapply(1:nrow(betajk), function(j){
+    sum(betajk[i,mis.inds[[j]]]/sij2[i,mis.inds[[j]]])^2
   })
-  os22<-sapply(1:nrow(betaij), function(i){
-    sum(1/sij2[i,mis.inds[[i]]])
+  os22<-sapply(1:nrow(betajk), function(j){
+    sum(1/sij2[i,mis.inds[[j]]])
   })
   
   # tau2f2<-function(param, b2s2, bs22, os22, gammai=gammai){
   #   tau2<-exp(param)
-  #   -1*  sum(  sapply(1:nrow(betaij), function(i){
-  #     gammai[i]* (.5*log(1/tau2) -.5*log(os22[i] + 1/tau2) -
-  #                   .5*(b2s2[i] - 
-  #                         bs22[i]/(os22[i] + 1/tau2)))
+  #   -1*  sum(  sapply(1:nrow(betajk), function(j){
+  #     gammai[j]* (.5*log(1/tau2) -.5*log(os22[j] + 1/tau2) -
+  #                   .5*(b2s2[j] - 
+  #                         bs22[j]/(os22[j] + 1/tau2)))
   #   }))
   # }
   # 
@@ -321,17 +339,17 @@ em_std_f<-function(betaij, sij2,
   
   k_i<-sapply(mis.inds, length)
   
-  MM<-nrow(betaij)
+  MM<-nrow(betajk)
   
-  mu.hat<-sapply(1:MM, function(i){
-    sum(betaij[i,mis.inds[[i]]]/sij2[i,mis.inds[[i]]])/(sum(1/sij2[i,mis.inds[[i]]]) + 1/(tau2))
+  mu.hat<-sapply(1:MM, function(j){
+    sum(betajk[i,mis.inds[[j]]]/sij2[i,mis.inds[[j]]])/(sum(1/sij2[i,mis.inds[[j]]]) + 1/(tau2))
   })
   
   strt<-Sys.time()
   for(iter in 1:(maxIter)){
     
-    deltaij<- mclapply(1:nrow(betaij), function(i){
-      deltis(betaij_i=betaij[i,], sij2_i=sij2[i,], alpha=alpha, f=f)
+    deltaij<- mclapply(1:nrow(betajk), function(j){
+      deltis(betajk_i=betajk[i,], sij2_i=sij2[i,], alpha=alpha, f=f)
     })
     deltaij<-matrix(unlist(deltaij), ncol=MM, byrow=FALSE)
     
@@ -344,20 +362,20 @@ em_std_f<-function(betaij, sij2,
       print("deltaij calculated.")
     }
     if(iter==1){
-      llbR1<-unlist(mclapply(1:nrow(betaij), function(i){
-        llbR1_i(betaij_i = betaij[i,mis.inds[[i]]], sij2_i=sij2[i,mis.inds[[i]]], tau2inv = 1/tau2)
+      llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
+        llbR1_i(betajk_i = betajk[i,mis.inds[[j]]], sij2_i=sij2[i,mis.inds[[j]]], tau2inv = 1/tau2)
       }, mc.cores=parcores)) - (k_i/2)*log(2*pi)
       
-      llbR0<-unlist( mclapply(1:nrow(betaij), function(i){
-        llbR0_i(betaij_i = betaij[i,mis.inds[[i]]], sij2_i = sij2[i,mis.inds[[i]]], alpha = alpha, f=f)
+      llbR0<-unlist( mclapply(1:nrow(betajk), function(j){
+        llbR0_i(betajk_i = betajk[i,mis.inds[[j]]], sij2_i = sij2[i,mis.inds[[j]]], alpha = alpha, f=f)
       }, mc.cores = parcores))
     }
     
-    gammai<-unlist(mclapply(1:MM, function(i){
-      gam<- p*exp(llbR1[i])/(exp(logsumexp(c(log(p) + llbR1[i], log(1-p) + llbR0[i]))))
+    gammai<-unlist(mclapply(1:MM, function(j){
+      gam<- p*exp(llbR1[j])/(exp(logsumexp(c(log(p) + llbR1[j], log(1-p) + llbR0[j]))))
       if(is.na(gam)){
-        m<-which.max(c(log(1-p) + llbR0[i],
-                       log(p) + llbR1[i]))                      
+        m<-which.max(c(log(1-p) + llbR0[j],
+                       log(p) + llbR1[j]))                      
         gam<-(m-1)
       }
       gam
@@ -370,21 +388,21 @@ em_std_f<-function(betaij, sij2,
     
     if(sum(is.na(gammai)) > 0) break
     if(sum(1-gammai)==0) break
-    fn<-sum(unlist(mclapply(1:MM, function(i){
-      (1-gammai[i])*sum(deltaij[mis.inds[[i]],i])
+    fn<-sum(unlist(mclapply(1:MM, function(j){
+      (1-gammai[j])*sum(deltaij[mis.inds[[j]],i])
     }, mc.cores = parcores)))
     fd<-sum((1-gammai)*k_i)
     f<-fn/fd
     #f<-sum((1-gammai)*(colSums(deltaij, na.rm=TRUE))) / (sum((1-gammai)*k_i))   ## later, replace na.rm with index to sum
     
     alpha<-sum((1-gammai)*
-                 unlist(mclapply(1:MM, function(i){
-                   sum((1-deltaij[mis.inds[[i]],i])*(betaij[i,mis.inds[[i]]]^2 / sij2[i,mis.inds[[i]]]))}, mc.cores = parcores)))/
-      sum((1-gammai)*unlist(mclapply(1:MM, function(i){
-        sum(1-deltaij[mis.inds[[i]],i])}, mc.cores = parcores)))
+                 unlist(mclapply(1:MM, function(j){
+                   sum((1-deltaij[mis.inds[[j]],i])*(betajk[i,mis.inds[[j]]]^2 / sij2[i,mis.inds[[j]]]))}, mc.cores = parcores)))/
+      sum((1-gammai)*unlist(mclapply(1:MM, function(j){
+        sum(1-deltaij[mis.inds[[j]],i])}, mc.cores = parcores)))
     
     # system.time({
-    # tau2Fit<-nlminb(start=log(tau2), objective = tau2f, betaij=betaij, sij2=sij2,  gammai=gammai, control=list(trace=2))
+    # tau2Fit<-nlminb(start=log(tau2), objective = tau2f, betajk=betajk, sij2=sij2,  gammai=gammai, control=list(trace=2))
     
     nllk <- MakeADFun ( data = list ( b2s2=b2s2, bs22=bs22, os22=os22, gammai=gammai) , 
                         parameters = list ( logTau2=log(tau2)) , DLL="tau2f",silent=TRUE)
@@ -399,8 +417,8 @@ em_std_f<-function(betaij, sij2,
     
     if(is.na(tau2)) break 
     
-    mu.hat<-unlist(mclapply(1:MM, function(i){
-      sum(betaij[i,mis.inds[[i]]]/sij2[i,mis.inds[[i]]])/(sum(1/sij2[i,mis.inds[[i]]]) + 1/tau2)
+    mu.hat<-unlist(mclapply(1:MM, function(j){
+      sum(betajk[i,mis.inds[[j]]]/sij2[i,mis.inds[[j]]])/(sum(1/sij2[i,mis.inds[[j]]]) + 1/tau2)
     }, mc.cores = parcores))
     
     p<-sum(gammai)/MM
@@ -409,17 +427,17 @@ em_std_f<-function(betaij, sij2,
       print(paste0("p=", round(p, 3), " f=", round(f, 3), " tau2=", round(tau2, 8), " alpha=", round(alpha, 3)))
     }
     
-    llbR1<-unlist(mclapply(1:nrow(betaij), function(i){
-      llbR1_i(betaij_i = betaij[i,mis.inds[[i]]], sij2_i=sij2[i,mis.inds[[i]]], tau2inv = 1/tau2)
+    llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
+      llbR1_i(betajk_i = betajk[i,mis.inds[[j]]], sij2_i=sij2[i,mis.inds[[j]]], tau2inv = 1/tau2)
     }, mc.cores=parcores)) - (k_i/2)*log(2*pi)
     
-    llbR0<-unlist( mclapply(1:nrow(betaij), function(i){
-      llbR0_i(betaij_i = betaij[i,mis.inds[[i]]], sij2_i = sij2[i,mis.inds[[i]]], alpha = alpha, f=f)
+    llbR0<-unlist( mclapply(1:nrow(betajk), function(j){
+      llbR0_i(betajk_i = betajk[i,mis.inds[[j]]], sij2_i = sij2[i,mis.inds[[j]]], alpha = alpha, f=f)
     }, mc.cores = parcores))
     
     
-    ll[iter]<-sum(unlist(mclapply(1:MM, function(i){
-      logsumexp(c(log(p) + llbR1[i], log(1-p) + llbR0[i]))
+    ll[iter]<-sum(unlist(mclapply(1:MM, function(j){
+      logsumexp(c(log(p) + llbR1[j], log(1-p) + llbR0[j]))
     }, mc.cores = parcores)))
     
     if(iter > 1){
@@ -446,8 +464,8 @@ em_std_f<-function(betaij, sij2,
     #print(llMat[1:iter])
   }
   end<-Sys.time()
-  se.hat<-unlist(mclapply(1:nrow(betaij), function(i){
-    sqrt(1/(sum(1/sij2[i,mis.inds[[i]]]) + 1/tau2))
+  se.hat<-unlist(mclapply(1:nrow(betajk), function(j){
+    sqrt(1/(sum(1/sij2[i,mis.inds[[j]]]) + 1/tau2))
   }, mc.cores = parcores))
   outliermat<-data.table(snp=1:ncol(deltaij),
                          t(deltaij))
@@ -457,8 +475,8 @@ em_std_f<-function(betaij, sij2,
                            lapply(.SD, function(x){(1-gammai)*(1-x)}),
                            .SDcols=paste0("deltai_",1:dim(deltaij)[1]), by=.(snp)]
   colnames(outlierprobs)[2:ncol(outlierprobs)]<-paste0("outlier_prob", 1:dim(deltaij)[1])
-  # if(!is.null(colnames(betaij))){
-  #   dnames<-gsub("beta.*\\_","",colnames(betaij))
+  # if(!is.null(colnames(betajk))){
+  #   dnames<-gsub("beta.*\\_","",colnames(betajk))
   #   
   # }
   if(!is.na(snpids) && length(snpids)==nrow(outliermat)) {
@@ -487,7 +505,7 @@ getpvals<-function(mod, s2, nModels, nullSNPsPerModel, numcores=parcores,save_al
   pdat<-nullMod<-list()
   for(j in 1:nModels){
     pdat[[j]]<-generateDataS2(model=mod, sij2=s2, Mnull=nullSNPsPerModel)
-    nullMod[[j]]<-em_std_f(pdat[[j]]$betaij, pdat[[j]]$sij2_sample, 
+    nullMod[[j]]<-em_std_f(pdat[[j]]$betajk, pdat[[j]]$sij2_sample, 
                            p=mod$p, f=mod$f, 
                            alpha=mod$alpha, tau2=mod$tau2,
                            parcores=numcores,verbose = TRUE)
@@ -525,22 +543,22 @@ getpvals<-function(mod, s2, nModels, nullSNPsPerModel, numcores=parcores,save_al
 
 generateDataS2<-function(model, sij2, Mnull=1000){
   
-  zeroL<-mclapply(1:nrow(sij2), function(i){
+  zeroL<-mclapply(1:nrow(sij2), function(j){
     which(sij2[i,]==0)
   }, mc.cores = parcores)
   chk<- which(sapply(zeroL, length) > 0)
   if(length(chk) > 0){
     for(i in chk){
-      sij2[i,zeroL[[i]]]<-NA
+      sij2[i,zeroL[[j]]]<-NA
     }
   }
-  infL<-mclapply(1:nrow(sij2), function(i){
+  infL<-mclapply(1:nrow(sij2), function(j){
     which(is.infinite(sij2[i,]))
   }, mc.cores = parcores)
   chk<- which(sapply(infL, length) > 0)
   if(length(chk) > 0){
     for(i in chk){
-      sij2[i,infL[[i]]]<-NA
+      sij2[i,infL[[j]]]<-NA
     }
   }
   p<-model$p
@@ -550,38 +568,38 @@ generateDataS2<-function(model, sij2, Mnull=1000){
   M<-ceiling(Mnull/(1-p))
   sample_inds<-sample(nrow(sij2),M,replace = TRUE)
   sij2_sample<-sij2[sample_inds,]
-  mis.inds<-lapply(1:nrow(sij2_sample), function(i){
+  mis.inds<-lapply(1:nrow(sij2_sample), function(j){
     which(!is.na(sij2_sample[i,]))
   })
   Ri<-rbinom(M, size=1, prob=p)
   mu<-Ri*rnorm(M, 0, sqrt(tau2))
-  k_i<-sapply(1:nrow(sij2_sample), function(i){sum(!is.na(sij2_sample[i,]))})
-  sj2<-lapply(1:M, function(i){sij2_sample[i,]})
-  f.ind<-lapply(1:M, function(i){
+  k_i<-sapply(1:nrow(sij2_sample), function(j){sum(!is.na(sij2_sample[i,]))})
+  sjk2<-lapply(1:M, function(j){sij2_sample[i,]})
+  Ojk<-lapply(1:M, function(j){
     vec<-rep(NA, dim(sij2)[2])
-    vec[mis.inds[[i]]]<-rbinom(k_i[i], size=1, prob=f)
+    vec[mis.inds[[j]]]<-rbinom(k_i[j], size=1, prob=f)
     vec
   })
   
-  betaj<-lapply(1:M, function(i){
+  betaj<-lapply(1:M, function(j){
     vec<-rep(NA, dim(sij2)[2])
-    vec[mis.inds[[i]]]<-
-      Ri[i] * rnorm(k_i[i], mu[i], sd=sqrt(sj2[[i]][mis.inds[[i]]])) + 
-      (1-Ri[i]) * ((f.ind[[i]][mis.inds[[i]]])*rnorm(k_i[i], 0, sqrt(sj2[[i]][mis.inds[[i]]])) + 
-                     (1-f.ind[[i]][mis.inds[[i]]])*rnorm(k_i[i], 0, sqrt(alpha)*sqrt(sj2[[i]][mis.inds[[i]]])))
+    vec[mis.inds[[j]]]<-
+      Ri[j] * rnorm(k_i[j], mu[j], sd=sqrt(sjk2[[j]][mis.inds[[j]]])) + 
+      (1-Ri[j]) * ((Ojk[[j]][mis.inds[[j]]])*rnorm(k_i[j], 0, sqrt(sjk2[[j]][mis.inds[[j]]])) + 
+                     (1-Ojk[[j]][mis.inds[[j]]])*rnorm(k_i[j], 0, sqrt(alpha)*sqrt(sjk2[[j]][mis.inds[[j]]])))
     
     vec
   })
   
-  meta.z<-sapply(1:length(betaj), function(i){
-    sum(betaj[[i]][mis.inds[[i]]]/sj2[[i]][mis.inds[[i]]]) / sqrt(sum(1/sj2[[i]][mis.inds[[i]]]))
+  meta.z<-sapply(1:length(betaj), function(j){
+    sum(betaj[[j]][mis.inds[[j]]]/sjk2[[j]][mis.inds[[j]]]) / sqrt(sum(1/sjk2[[j]][mis.inds[[j]]]))
   })
-  betaij<-matrix(unlist(betaj), ncol=dim(sij2)[2], byrow=TRUE)
-  return(list(betaij=betaij,
+  betajk<-matrix(unlist(betaj), ncol=dim(sij2)[2], byrow=TRUE)
+  return(list(betajk=betajk,
               sij2_sample=sij2_sample,
               sample_inds=sample_inds,
               meta.z=meta.z, 
               Ri=Ri, 
-              f.ind=f.ind,
+              Ojk=Ojk,
               mui=mu))
 }
