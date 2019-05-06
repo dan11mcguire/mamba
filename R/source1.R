@@ -193,11 +193,11 @@ betajk<-matrix(unlist(d$betajk),
 sjk2<-matrix(unlist(d$sjk2),
 		byrow=TRUE,
 		nrow=length(d$betajk))
-parcores=1; 
-                   p=0.003;
-                   f=0.96;
-                   tau2=0.0002;
-                   alpha=3;
+parcores=6; 
+                   p=0.01;
+                   lambda=0.975;
+                   tau2=0.00025;
+                   alpha=5;
                    #conv.eps=1e-3;
                    rel.eps=1e-8;
                    verbose=1;
@@ -206,7 +206,7 @@ parcores=1;
 mamba<-function(betajk, sjk2, 
                    parcores=1, 
                    p=0.003,
-                   f=0.96,
+                   lambda=0.96,
                    tau2=0.0002,
                    alpha=3,
                    #conv.eps=1e-3,
@@ -232,7 +232,7 @@ mamba<-function(betajk, sjk2,
  }, mc.cores = parcores)
  chk<- which(sapply(infL, length) > 0)
  if(length(chk) > 0){
-   for(i in chk){
+   for(j in chk){
      sjk2[j,infL[[j]]]<-NA
      betajk[j,infL[[j]]]<-NA
    }
@@ -242,7 +242,7 @@ mamba<-function(betajk, sjk2,
  }, mc.cores = parcores)
  chk<- which(sapply(infL, length) > 0)
  if(length(chk) > 0){
-   for(i in chk){
+   for(j in chk){
      sjk2[j,infL[[j]]]<-NA
      betajk[j,infL[[j]]]<-NA
    }
@@ -354,11 +354,13 @@ mamba<-function(betajk, sjk2,
     }
     
     llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
-      llbR1_i(betajk_i = betajk[j,mis.inds[[j]]], sjk2_i=sjk2[j,mis.inds[[j]]], tau2inv = 1/tau2)
-    }, mc.cores=parcores)) - (k_i/2)*log(2*pi)
+      llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], sjk2_j=sjk2[j,mis.inds[[j]]], 
+		tau2inv = 1/tau2)
+    }, mc.cores=parcores)) - (k_j/2)*log(2*pi)
     
     llbR0<-unlist( mclapply(1:nrow(betajk), function(j){
-      llbR0_i(betajk_i = betajk[j,mis.inds[[j]]], sjk2_i = sjk2[j,mis.inds[[j]]], alpha = alpha, f=f)
+      llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], sjk2_j = sjk2[j,mis.inds[[j]]], 
+		alpha = alpha, lambda=lambda)
     }, mc.cores = parcores))
     
     
