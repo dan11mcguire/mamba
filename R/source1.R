@@ -9,6 +9,18 @@ loadtmb<-function(dir=getwd()){
 #M<-50000; alpha<-10
 #lambda<-0.95; tau2<-2.5e-4; p<-0.01; resref=NULL;n=rep(50*10^3,10)
 #generate_data_mamba(M,p,tau2,lambda,alpha,n=rep(50*10^3,10))
+
+#' Simulate summary statistics according to the MAMBA model.
+#' @param M number of SNPs for which to simulate summary stats.
+#' @param p proportion of SNPs with real non-zero effects.
+#' @param tau2 variance of real associated non-zero SNPs.
+#' @parameter lambda proportion of NON-outlier studies for non-replicable SNPs. 
+#' @parameter n vector of sample sizes from the contributing studies. 
+#' @parameter alpha variance inflation factor of outlier studies.
+#' @param resref an optional vector of residual variances to sample from (with replacement) 
+#' when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
+
+
 generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10), 
 			     lambda=0.975, alpha=5){
 
@@ -186,23 +198,43 @@ generateData_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
               muj=muj))
 }
 
-d<-generateData_mamba()
-betajk<-matrix(unlist(d$betajk),
-		byrow=TRUE,
-		nrow=length(d$betajk))
-sjk2<-matrix(unlist(d$sjk2),
-		byrow=TRUE,
-		nrow=length(d$betajk))
-parcores=6; 
-                   p=0.01;
-                   lambda=0.975;
-                   tau2=0.00025;
-                   alpha=5;
-                   #conv.eps=1e-3;
-                   rel.eps=1e-8;
-                   verbose=1;
-                   snpids=NA;
-                   maxIter=10^4L
+#d<-generateData_mamba()
+#betajk<-matrix(unlist(d$betajk),
+#		byrow=TRUE,
+#		nrow=length(d$betajk))
+#sjk2<-matrix(unlist(d$sjk2),
+#		byrow=TRUE,
+#		nrow=length(d$betajk))
+#parcores=1; 
+#                   p=0.003;
+#                   f=0.96;
+#                   tau2=0.0002;
+#                   alpha=3;
+#                   #conv.eps=1e-3;
+#                   rel.eps=1e-8;
+#                   verbose=1;
+#                   snpids=NA;
+#                   maxIter=10^4L
+
+
+#betajk<-betaij
+#sjk2<-sij2
+#
+#parcores=1; 
+#p=0.003;
+#lambda=0.96;
+#tau2=0.0002;
+#alpha=3;
+##conv.eps=1e-3;
+#rel.eps=1e-8;
+#verbose=1;
+#snpids=NA;
+#maxIter=10^4L
+
+
+
+
+
 mamba<-function(betajk, sjk2, 
                    parcores=1, 
                    p=0.003,
@@ -216,7 +248,8 @@ mamba<-function(betajk, sjk2,
                    maxIter=10^4L){
   betajk<-as.matrix(betajk)
   sjk2<-as.matrix(sjk2)
-  
+
+## Replace any summary stats with standard error = 0 with missing
   zeroL<-mclapply(1:nrow(sjk2), function(j){
     which(sjk2[j,]==0)
   }, mc.cores = parcores)
@@ -227,12 +260,14 @@ mamba<-function(betajk, sjk2,
       betajk[j,zeroL[[j]]]<-NA
     }
   }
+
+## Replace any summary stats with standard error = inf or beta=inf with missing
  infL<-mclapply(1:nrow(sjk2), function(j){
    which(is.infinite(sjk2[j,]))
  }, mc.cores = parcores)
  chk<- which(sapply(infL, length) > 0)
  if(length(chk) > 0){
-   for(j in chk){
+   for(i in chk){
      sjk2[j,infL[[j]]]<-NA
      betajk[j,infL[[j]]]<-NA
    }
@@ -242,11 +277,12 @@ mamba<-function(betajk, sjk2,
  }, mc.cores = parcores)
  chk<- which(sapply(infL, length) > 0)
  if(length(chk) > 0){
-   for(j in chk){
+   for(i in chk){
      sjk2[j,infL[[j]]]<-NA
      betajk[j,infL[[j]]]<-NA
    }
  }
+### Identify indices of studies with non-missing summary stats at each SNP
   mis.inds<-mclapply(1:nrow(sjk2), function(j){
     which(!is.na(sjk2[j,]))
   }, mc.cores = parcores)
@@ -281,7 +317,9 @@ mamba<-function(betajk, sjk2,
     })
     deltajk<-matrix(unlist(deltajk), ncol=MM, byrow=FALSE)
     
-    missingdelta<-unlist(mclapply(1:MM, function(j){ mean(is.na(deltajk[mis.inds[[j]],j]))}, mc.cores = parcores))
+    missingdelta<-unlist(mclapply(1:MM, function(j){ 
+			mean(is.na(deltajk[mis.inds[[j]],j]))
+	      }, mc.cores = parcores))
     if(sum(missingdelta) > 0) {
       print("na's in deltajk")
       break
@@ -291,12 +329,16 @@ mamba<-function(betajk, sjk2,
     }
     if(iter==1){
       llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
-        llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], sjk2_j=sjk2[j,mis.inds[[j]]], tau2inv = 1/tau2)
+        llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], 
+		sjk2_j=sjk2[j,mis.inds[[j]]], 
+		tau2inv = 1/tau2)
       }, mc.cores=parcores)) - (k_j/2)*log(2*pi)
       
       llbR0<-unlist( mclapply(1:nrow(betajk), function(j){
-        llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], sjk2_j = sjk2[j,mis.inds[[j]]], 
-		alpha = alpha, lambda=lambda)
+        llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], 
+		sjk2_j = sjk2[j,mis.inds[[j]]], 
+		alpha = alpha, 
+		lambda=lambda)
       }, mc.cores = parcores))
     }
     
@@ -322,11 +364,13 @@ mamba<-function(betajk, sjk2,
     }, mc.cores = parcores)))
     fd<-sum((1-gammaj)*k_j)
     lambda<-fn/fd
-    #f<-sum((1-gammaj)*(colSums(deltajk, na.rm=TRUE))) / (sum((1-gammaj)*k_i))   ## later, replace na.rm with index to sum
     
     alpha<-sum((1-gammaj)*
                  unlist(mclapply(1:MM, function(j){
-                   sum((1-deltajk[mis.inds[[j]],j])*(betajk[j,mis.inds[[j]]]^2 / sjk2[j,mis.inds[[j]]]))}, mc.cores = parcores)))/
+                   sum(
+   (1-deltajk[mis.inds[[j]],j])*(betajk[j,mis.inds[[j]]]^2 / sjk2[j,mis.inds[[j]]])
+   )
+    }, mc.cores = parcores)))/
       sum((1-gammaj)*unlist(mclapply(1:MM, function(j){
         sum(1-deltajk[mis.inds[[j]],j])}, mc.cores = parcores)))
     
@@ -334,11 +378,8 @@ mamba<-function(betajk, sjk2,
                         parameters = list ( logTau2=log(tau2)) , DLL="tau2f",silent=TRUE)
     fit <- nlminb ( start = nllk $par , objective = nllk $fn , gradient = nllk $gr ,
                     lower =c(- Inf ,0) , upper =c( Inf , Inf ), control = list(trace=0))
+    
     tau2<-exp(fit$par)
-    # tau2Fit2<-nlminb(start=log(tau2), objective = tau2f2, 
-    #                 b2s2=b2s2, bs22=bs22, os22=os22, gammaj=gammaj, 
-    #                 control=list(trace=2))
-    # tau2<-exp(tau2Fit2$par)
     tau2<-max(tau2, 1e-17)
     
     if(is.na(tau2)) break 
@@ -350,17 +391,20 @@ mamba<-function(betajk, sjk2,
     p<-sum(gammaj)/MM
     if(verbose > 0){
       print("m step finished.")
-      print(paste0("p=", round(p, 3), " f=", round(f, 3), " tau2=", round(tau2, 8), " alpha=", round(alpha, 3)))
+      print(paste0("p=", round(p, 3), " lambda=", round(f, 3), " tau2=", round(tau2, 8), " alpha=", round(alpha, 3)))
     }
     
     llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
-      llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], sjk2_j=sjk2[j,mis.inds[[j]]], 
-		tau2inv = 1/tau2)
+      llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], 
+	      sjk2_j=sjk2[j,mis.inds[[j]]], 
+	      tau2inv = 1/tau2)
     }, mc.cores=parcores)) - (k_j/2)*log(2*pi)
     
     llbR0<-unlist( mclapply(1:nrow(betajk), function(j){
-      llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], sjk2_j = sjk2[j,mis.inds[[j]]], 
-		alpha = alpha, lambda=lambda)
+      llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], 
+	      sjk2_j = sjk2[j,mis.inds[[j]]], 
+	      alpha = alpha, 
+	      lambda=lambda)
     }, mc.cores = parcores))
     
     
@@ -503,20 +547,20 @@ generateDataS2<-function(model, sjk2, Mnull=1000){
   })
   Ri<-rbinom(M, size=1, prob=p)
   mu<-Ri*rnorm(M, 0, sqrt(tau2))
-  k_i<-sapply(1:nrow(sjk2_sample), function(j){sum(!is.na(sjk2_sample[j,]))})
+  k_j<-sapply(1:nrow(sjk2_sample), function(j){sum(!is.na(sjk2_sample[j,]))})
   sjk2<-lapply(1:M, function(j){sjk2_sample[j,]})
   Ojk<-lapply(1:M, function(j){
     vec<-rep(NA, dim(sjk2)[2])
-    vec[mis.inds[[j]]]<-rbinom(k_i[j], size=1, prob=f)
+    vec[mis.inds[[j]]]<-rbinom(k_j[j], size=1, prob=f)
     vec
   })
   
   betaj<-lapply(1:M, function(j){
     vec<-rep(NA, dim(sjk2)[2])
     vec[mis.inds[[j]]]<-
-      Ri[j] * rnorm(k_i[j], mu[j], sd=sqrt(sjk2[[j]][mis.inds[[j]]])) + 
-      (1-Ri[j]) * ((Ojk[[j]][mis.inds[[j]]])*rnorm(k_i[j], 0, sqrt(sjk2[[j]][mis.inds[[j]]])) + 
-                     (1-Ojk[[j]][mis.inds[[j]]])*rnorm(k_i[j], 0, sqrt(alpha)*sqrt(sjk2[[j]][mis.inds[[j]]])))
+      Ri[j] * rnorm(k_j[j], mu[j], sd=sqrt(sjk2[[j]][mis.inds[[j]]])) + 
+      (1-Ri[j]) * ((Ojk[[j]][mis.inds[[j]]])*rnorm(k_j[j], 0, sqrt(sjk2[[j]][mis.inds[[j]]])) + 
+                     (1-Ojk[[j]][mis.inds[[j]]])*rnorm(k_j[j], 0, sqrt(alpha)*sqrt(sjk2[[j]][mis.inds[[j]]])))
     
     vec
   })
