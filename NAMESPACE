@@ -1,5 +1,6 @@
-useDynLib(emfuncs, .registration=TRUE)
+useDynLib(mamba, .registration=TRUE)
 exportPattern("^[[:alpha:]]+")
 import(data.table)
 import(parallel)
 importFrom(Rcpp, evalCpp)
+useDynLib(tau2f)

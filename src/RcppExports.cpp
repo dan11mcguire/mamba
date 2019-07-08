@@ -6,22 +6,22 @@
 
 using namespace Rcpp;
 
-// llbR1_i
-double llbR1_i(NumericVector betaij_i, NumericVector sij2_i, double tau2inv);
-RcppExport SEXP _emfuncs_llbR1_i(SEXP betaij_iSEXP, SEXP sij2_iSEXP, SEXP tau2invSEXP) {
+// llbR1_j
+double llbR1_j(NumericVector betajk_j, NumericVector sjk2_j, double tau2inv);
+RcppExport SEXP _mamba_llbR1_j(SEXP betajk_jSEXP, SEXP sjk2_jSEXP, SEXP tau2invSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type betaij_i(betaij_iSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type sij2_i(sij2_iSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type betajk_j(betajk_jSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type sjk2_j(sjk2_jSEXP);
     Rcpp::traits::input_parameter< double >::type tau2inv(tau2invSEXP);
-    rcpp_result_gen = Rcpp::wrap(llbR1_i(betaij_i, sij2_i, tau2inv));
+    rcpp_result_gen = Rcpp::wrap(llbR1_j(betajk_j, sjk2_j, tau2inv));
     return rcpp_result_gen;
 END_RCPP
 }
 // logsumexp
 double logsumexp(NumericVector x);
-RcppExport SEXP _emfuncs_logsumexp(SEXP xSEXP) {
+RcppExport SEXP _mamba_logsumexp(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -31,50 +31,50 @@ BEGIN_RCPP
 END_RCPP
 }
 // llb0_ab
-NumericVector llb0_ab(double betaij, double sij2, double f, double alpha);
-RcppExport SEXP _emfuncs_llb0_ab(SEXP betaijSEXP, SEXP sij2SEXP, SEXP fSEXP, SEXP alphaSEXP) {
+NumericVector llb0_ab(double betajk, double sjk2, double lambda, double alpha);
+RcppExport SEXP _mamba_llb0_ab(SEXP betajkSEXP, SEXP sjk2SEXP, SEXP lambdaSEXP, SEXP alphaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type betaij(betaijSEXP);
-    Rcpp::traits::input_parameter< double >::type sij2(sij2SEXP);
-    Rcpp::traits::input_parameter< double >::type f(fSEXP);
+    Rcpp::traits::input_parameter< double >::type betajk(betajkSEXP);
+    Rcpp::traits::input_parameter< double >::type sjk2(sjk2SEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
-    rcpp_result_gen = Rcpp::wrap(llb0_ab(betaij, sij2, f, alpha));
+    rcpp_result_gen = Rcpp::wrap(llb0_ab(betajk, sjk2, lambda, alpha));
     return rcpp_result_gen;
 END_RCPP
 }
-// llbR0_i
-double llbR0_i(NumericVector betaij_i, NumericVector sij2_i, double f, double alpha);
-RcppExport SEXP _emfuncs_llbR0_i(SEXP betaij_iSEXP, SEXP sij2_iSEXP, SEXP fSEXP, SEXP alphaSEXP) {
+// llbR0_j
+double llbR0_j(NumericVector betajk_j, NumericVector sjk2_j, double lambda, double alpha);
+RcppExport SEXP _mamba_llbR0_j(SEXP betajk_jSEXP, SEXP sjk2_jSEXP, SEXP lambdaSEXP, SEXP alphaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type betaij_i(betaij_iSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type sij2_i(sij2_iSEXP);
-    Rcpp::traits::input_parameter< double >::type f(fSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type betajk_j(betajk_jSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type sjk2_j(sjk2_jSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
-    rcpp_result_gen = Rcpp::wrap(llbR0_i(betaij_i, sij2_i, f, alpha));
+    rcpp_result_gen = Rcpp::wrap(llbR0_j(betajk_j, sjk2_j, lambda, alpha));
     return rcpp_result_gen;
 END_RCPP
 }
 // deltis
-NumericVector deltis(NumericVector betaij_i, NumericVector sij2_i, double f, double alpha);
-RcppExport SEXP _emfuncs_deltis(SEXP betaij_iSEXP, SEXP sij2_iSEXP, SEXP fSEXP, SEXP alphaSEXP) {
+NumericVector deltis(NumericVector betajk_j, NumericVector sjk2_j, double lambda, double alpha);
+RcppExport SEXP _mamba_deltis(SEXP betajk_jSEXP, SEXP sjk2_jSEXP, SEXP lambdaSEXP, SEXP alphaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type betaij_i(betaij_iSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type sij2_i(sij2_iSEXP);
-    Rcpp::traits::input_parameter< double >::type f(fSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type betajk_j(betajk_jSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type sjk2_j(sjk2_jSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
-    rcpp_result_gen = Rcpp::wrap(deltis(betaij_i, sij2_i, f, alpha));
+    rcpp_result_gen = Rcpp::wrap(deltis(betajk_j, sjk2_j, lambda, alpha));
     return rcpp_result_gen;
 END_RCPP
 }
 // rcpp_hello_world
 List rcpp_hello_world();
-RcppExport SEXP _emfuncs_rcpp_hello_world() {
+RcppExport SEXP _mamba_rcpp_hello_world() {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -84,16 +84,16 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_emfuncs_llbR1_i", (DL_FUNC) &_emfuncs_llbR1_i, 3},
-    {"_emfuncs_logsumexp", (DL_FUNC) &_emfuncs_logsumexp, 1},
-    {"_emfuncs_llb0_ab", (DL_FUNC) &_emfuncs_llb0_ab, 4},
-    {"_emfuncs_llbR0_i", (DL_FUNC) &_emfuncs_llbR0_i, 4},
-    {"_emfuncs_deltis", (DL_FUNC) &_emfuncs_deltis, 4},
-    {"_emfuncs_rcpp_hello_world", (DL_FUNC) &_emfuncs_rcpp_hello_world, 0},
+    {"_mamba_llbR1_j", (DL_FUNC) &_mamba_llbR1_j, 3},
+    {"_mamba_logsumexp", (DL_FUNC) &_mamba_logsumexp, 1},
+    {"_mamba_llb0_ab", (DL_FUNC) &_mamba_llb0_ab, 4},
+    {"_mamba_llbR0_j", (DL_FUNC) &_mamba_llbR0_j, 4},
+    {"_mamba_deltis", (DL_FUNC) &_mamba_deltis, 4},
+    {"_mamba_rcpp_hello_world", (DL_FUNC) &_mamba_rcpp_hello_world, 0},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_emfuncs(DllInfo *dll) {
+RcppExport void R_init_mamba(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

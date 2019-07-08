@@ -18,7 +18,11 @@ loadtmb<-function(dir=getwd()){
 #' @parameter n vector of sample sizes from the contributing studies. 
 #' @parameter alpha variance inflation factor of outlier studies.
 #' @param resref an optional vector of residual variances to sample from (with replacement) 
-#' when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
+#'   when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
+#' @return 
+#'  A list of effect size estimates \code{betajk}, standard error 
+#' @examples
+#' generateData_mamba(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), lambda=0.975, alpha=15)
 
 
 generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10), 
@@ -29,7 +33,7 @@ generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(
 	 resref<-res2ref_cpd[,sqrt(res2)];
    } 
   Rj<-rbinom(M, size=1, prob=p)
-  muj<-Rj*rnorm(M, 0, tau2)
+  muj<-Rj*rnorm(M, 0, sqrt(tau2))
   k<-length(n)
   res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
   sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
@@ -375,7 +379,8 @@ mamba<-function(betajk, sjk2,
         sum(1-deltajk[mis.inds[[j]],j])}, mc.cores = parcores)))
     
     nllk <- MakeADFun ( data = list ( b2s2=b2s2, bs22=bs22, os22=os22, gammaj=gammaj) , 
-                        parameters = list ( logTau2=log(tau2)) , DLL="tau2f",silent=TRUE)
+                        parameters = list ( logTau2=log(tau2)) , 
+			DLL="tau2f",silent=TRUE)
     fit <- nlminb ( start = nllk $par , objective = nllk $fn , gradient = nllk $gr ,
                     lower =c(- Inf ,0) , upper =c( Inf , Inf ), control = list(trace=0))
     
@@ -391,7 +396,10 @@ mamba<-function(betajk, sjk2,
     p<-sum(gammaj)/MM
     if(verbose > 0){
       print("m step finished.")
-      print(paste0("p=", round(p, 3), " lambda=", round(f, 3), " tau2=", round(tau2, 8), " alpha=", round(alpha, 3)))
+      print(paste0("p=", round(p, 3), 
+		   " lambda=", round(f, 3), 
+		   " tau2=", round(tau2, 8), 
+		   " alpha=", round(alpha, 3)))
     }
     
     llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
@@ -414,9 +422,9 @@ mamba<-function(betajk, sjk2,
     
     if(iter > 1){
       llMat<-rbindlist(list(llMat,
-                            data.table(p=p,f=f,tau2=tau2,alpha=alpha,ll=ll[iter])))
+                            data.table(p=p,lambda=lambda,tau2=tau2,alpha=alpha,ll=ll[iter])))
     } else{
-      llMat<-data.table(p=p,f=f,tau2=tau2,alpha=alpha,ll=ll[iter])
+      llMat<-data.table(p=p,lambda=lambda,tau2=tau2,alpha=alpha,ll=ll[iter])
     } 
    
    # convergence criteria # 
@@ -461,7 +469,7 @@ mamba<-function(betajk, sjk2,
               p=p,
               gammaj=gammaj,
               alpha=alpha,
-              f=f,
+              lambda=lambda,
               tau2=tau2, 
               mu.hat=mu.hat, 
               se.hat=se.hat,
@@ -469,18 +477,23 @@ mamba<-function(betajk, sjk2,
               outliermat=outliermat,
               outlierprobs=outlierprobs, 
               time=end-strt,
-              llMat=llMat[,`:=`(eps=ll-shift(ll,1),
-                                rel.eps=(ll-shift(ll,1)/ll))]))
+              param_est_log=llMat[,`:=`(eps=ll-shift(ll,1),
+                                rel.eps=((ll-shift(ll,1))/ll))]))
 }
 
-getpvals<-function(mod, s2, nModels, nullSNPsPerModel, numcores=parcores,save_all=FALSE,
+getpvals<-function(mod, 
+		   s2, 
+		   nModels, 
+		   nullSNPsPerModel, 
+		   numcores=parcores,
+		   save_all=FALSE,
                    out){
   
   pdat<-nullMod<-list()
   for(j in 1:nModels){
     pdat[[j]]<-generateDataS2(model=mod, sjk2=s2, Mnull=nullSNPsPerModel)
     nullMod[[j]]<-em_std_f(pdat[[j]]$betajk, pdat[[j]]$sjk2_sample, 
-                           p=mod$p, f=mod$f, 
+                           p=mod$p, lambda=mod$lambda, 
                            alpha=mod$alpha, tau2=mod$tau2,
                            parcores=numcores,verbose = TRUE)
     nullscoresj<-nullMod[[j]]$gammaj
@@ -489,9 +502,16 @@ getpvals<-function(mod, s2, nModels, nullSNPsPerModel, numcores=parcores,save_al
     fwrite(data.table(nullscoresj),
            file=paste0(out, "nullscores.",seed,".txt"),
            col.names = FALSE)
-    system(paste0("cat ",paste0(out, "nullscores.",seed,".txt")," >> ",paste0(out, "nullscores.txt")))
-    system(paste0(" echo $(wc -l ", paste0(out, "nullscores.txt) seed ",seed, " >> ",paste0(out, "nullscores.log"))))
+   
+    system(paste0("cat ",
+		  paste0(out, "nullscores.",seed,".txt")," >> ",
+		  paste0(out, "nullscores.txt")))
+    system(paste0(" echo $(wc -l ", 
+		  paste0(out, "nullscores.txt) seed ",seed, " >> ",
+			 paste0(out, "nullscores.log"))))
+    
     system(paste0("rm ",paste0(out, "nullscores.",seed,".txt")))
+    
     print(paste0("Model ",j, " of ", nModels, " complete.")) 
   }
   nullscores<-unlist(lapply(nullMod, "[[", "gammaj"))
@@ -509,8 +529,7 @@ getpvals<-function(mod, s2, nModels, nullSNPsPerModel, numcores=parcores,save_al
                 nullMod=nullMod))
   } else{
     
-    return(list(nullscores=nullscores
-                ))
+    return(list(nullscores=nullscores))
   }
 }
 
