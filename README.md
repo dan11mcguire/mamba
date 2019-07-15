@@ -21,11 +21,13 @@ The MAMBA model could then be fit by:
     mod<-mamba(betajk=d$beta, sjk2=d$sjk2)
 
 
-The `mamba()` function then fits a two-level mixture model to the data, and calculates a posterior-probability-of-replicability (PPR) for each SNP.  For SNPs with low PPR, the model also estimates a posterior probability that a particular summary statistic is an ``outlier''. We use the term ``outlier'' here to indicate a summary statistic which is significant,  
+The `mamba()` function then fits a two-level mixture model to the data, and calculates a posterior-probability-of-replicability (PPR) for each SNP.  This is given in `mod$gammaj`.  
+
+For SNPs with low PPR, the model also estimates a posterior probability that a particular summary statistic is an "outlier". We use the term "outlier" here to indicate a summary statistic which may be extreme or significant due only to artifacts.  This is given in the `mod$outlierprobs` matrix.
 
 
 ## Analysis Pipeline 
-
+  ** add real data examples with preprocessing **
 **Step 0**: First perform a fixed-effect GWA meta-analysis to identify loci of interest with suggestive evidence of association (For example, could use a threshold such as *p < 1\times 10^-5* 
 
 **Step 1a**: Prune variants with suggestive evidence of association using the clumping procedure implemented in Plink v1.9.
