@@ -1,9 +1,9 @@
-loadtmb<-function(dir=getwd()){
-  compile(paste0(dir, "/tau2f.cpp"))
-  dyn.load(dynlib(paste0(dir, "/tau2f")))
-  data("res2ref_cpd")
-
-}
+#loadtmb<-function(dir=getwd()){
+#  compile(paste0(dir, "/tau2f.cpp"))
+#  dyn.load(dynlib(paste0(dir, "/tau2f")))
+#  data("res2ref_cpd")
+#
+#}
 
 
 #M<-50000; alpha<-10
@@ -14,15 +14,22 @@ loadtmb<-function(dir=getwd()){
 #' @param M number of SNPs for which to simulate summary stats.
 #' @param p proportion of SNPs with real non-zero effects.
 #' @param tau2 variance of real associated non-zero SNPs.
-#' @parameter lambda proportion of NON-outlier studies for non-replicable SNPs. 
-#' @parameter n vector of sample sizes from the contributing studies. 
-#' @parameter alpha variance inflation factor of outlier studies.
+#' @param lambda proportion of NON-outlier studies for non-replicable SNPs. 
+#' @param n vector of sample sizes from the contributing studies. 
+#' @param alpha variance inflation factor of outlier studies.
 #' @param resref an optional vector of residual variances to sample from (with replacement) 
 #'   when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
 #' @return 
-#'  A list of effect size estimates \code{betajk}, standard error 
+#'  A list containing 
+#'  An Mxk matrix of effect size estimates \code{betajk}, 
+#'  An Mxk matrix of effect size estimate  variances \code{sjk2}, 
+#'  M-length vector inverse-variance weighted meta-analysis z-scores \code{meta.z}, 
+#'  an M-length binary vector indicating real / non-real effect at each SNP \code{Rj},
+#'  an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
+#'  Binary matrix \code{Ojk} indicating whether study was normal(Ojk=1) or outlier (Ojk=0).
 #' @examples
-#' generateData_mamba(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), lambda=0.975, alpha=15)
+#' generateData_mamba(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), lambda=0.975, alpha=15) 
+#' @export
 
 
 generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10), 
@@ -30,7 +37,7 @@ generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(
 
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
-	 resref<-res2ref_cpd[,sqrt(res2)];
+	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
   muj<-Rj*rnorm(M, 0, sqrt(tau2))
@@ -46,6 +53,11 @@ generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(
   meta.z<-sapply(1:length(betajk), function(j){
     sum(betajk[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
+
+  betajk<-matrix(unlist(betajk), ncol=k, byrow=TRUE)
+  sjk2<-matrix(unlist(sjk2), ncol=k, byrow=TRUE)
+  Ojk<-matrix(unlist(Ojk), ncol=k, byrow=TRUE)
+ 
   return(list(betajk=betajk,
               sjk2=sjk2,
               meta.z=meta.z, 
@@ -54,18 +66,36 @@ generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(
               muj=muj))
 }
 
+#' Simulate summary statistics according to the (inverse-variance weighted) fixed effects model. 
+#' @param M number of SNPs for which to simulate summary stats.
+#' @param p proportion of SNPs with real non-zero effects.
+#' @param tau2 variance of real associated non-zero SNPs.
+#' @param n vector of sample sizes from the contributing studies. 
+#' @param resref an optional vector of residual variances to sample from (with replacement) 
+#'   when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
+#' @return
+#'  A list containing:
+#'  An Mxk matrix of effect size estimates \code{betajk}, 
+#'  An Mxk matrix of effect size estimate  variances \code{sjk2}, 
+#'  M-length vector inverse-variance weighted meta-analysis z-scores \code{meta.z}, 
+#'  an M-length binary vector indicating real / non-real effect at each SNP \code{Rj},
+#'  an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
+#' @examples
+#' generateData_fe(M=100, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)) 
+#' @export
+
+
 generateData_fe<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
   
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
-	 resref<-res2ref_cpd[,sqrt(res2)];
+	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
-  muj<-Rj*rnorm(M, 0, tau2)
+  muj<-Rj*rnorm(M, 0, sqrt(tau2))
   k<-length(n)
   res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
   sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
-  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
   betajk<-lapply(1:M, function(j){
     rnorm(k, muj[j], sd=sqrt(sjk2[[j]]))
   })
@@ -73,26 +103,48 @@ generateData_fe<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*
   meta.z<-sapply(1:length(betajk), function(j){
     sum(betajk[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
+
+  betajk<-matrix(unlist(betajk), ncol=k, byrow=TRUE)
+  sjk2<-matrix(unlist(sjk2), ncol=k, byrow=TRUE)
+  
   return(list(betajk=betajk,
               sjk2=sjk2,
               meta.z=meta.z, 
               Rj=Rj, 
-              Ojk=Ojk,
               muj=muj))
 }
 
+#' Simulate summary statistics according to the binary-effects (be) model.
+#' @param M number of SNPs for which to simulate summary stats.
+#' @param p proportion of SNPs with real non-zero effects.
+#' @param tau2 variance of real associated non-zero SNPs.
+#' @param n vector of sample sizes from the contributing studies. 
+#' @param resref an optional vector of residual variances to sample from (with replacement) 
+#'   when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
+#' @return
+#'  A list containing:
+#'  An Mxk matrix of effect size estimates \code{betajk}, 
+#'  An Mxk matrix of effect size estimate  variances \code{sjk2}, 
+#'  M-length vector inverse-variance weighted meta-analysis z-scores \code{meta.z}, 
+#'  an M-length binary vector indicating real / non-real effect at each SNP \code{Rj},
+#'  an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
+#'  an M-length vector indicating the number of studies at each SNP with non-zero effects.
+#'  an Mxk binary matrix indicating which studies at which SNP had non-zero effects.
+#' @examples
+#' generateData_mamba(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), lambda=0.975, alpha=15) 
+#' @export
 
 generateData_be<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
-	 resref<-res2ref_cpd[,sqrt(res2)];
+	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
-  muj<-Rj*rnorm(M, 0, tau2)
+  muj<-Rj*rnorm(M, 0, sqrt(tau2))
+
   k<-length(n)
   res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
   sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
-  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
   Nej<-sapply(1:M, function(j){ Rj[j]*sample(1:k, 1) })
   bej<-lapply(1:M, function(j){
     be<-rep(0, k)
@@ -109,29 +161,55 @@ generateData_be<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*
   meta.z<-sapply(1:length(betajk), function(j){
     sum(betajk[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
+
+  betajk<-matrix(unlist(betajk), ncol=k, byrow=TRUE)
+  sjk2<-matrix(unlist(sjk2), ncol=k, byrow=TRUE)
+  bej<-matrix(unlist(bej), ncol=k, byrow=TRUE)
+
   return(list(betajk=betajk,
               sjk2=sjk2,
               meta.z=meta.z, 
               Rj=Rj, 
-              Ojk=Ojk,
               muj=muj, 
               Nej=Nej,
               bej=bej))
 }
 
+#' Simulate summary statistics according to random effects model.
+#' @param M number of SNPs for which to simulate summary stats.
+#' @param p proportion of SNPs with real non-zero effects.
+#' @param tau2 variance of real associated non-zero SNPs.
+#' @param n vector of sample sizes from the contributing studies. 
+#' @param alpha variance inflation factor of outlier studies.
+#' @param resref an optional vector of residual variances to sample from (with replacement) 
+#'   when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
+#' @param I2 the I2 heterogeneity statistic for each SNP. 
+#'  The variance of study-level effects around population level effect at each SNP 
+#'  is specified given I2 level (between 0,1) and the simulated standard errors.   
+#' @return
+#'  A list containing:
+#'  An Mxk matrix of effect size estimates \code{betajk}, 
+#'  An Mxk matrix of effect size estimate  variances \code{sjk2}, 
+#'  M-length vector inverse-variance weighted meta-analysis z-scores \code{meta.z}, 
+#'  an M-length binary vector indicating real / non-real effect at each SNP \code{Rj},
+#'  an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
+#'  an Mxk matrix of the true study-level effects \code{etajk}
+#'  an M-length vector of the variance of the study-level effects around the SNP's population level effect \code{omega2j}
+#' @examples
+#'   generateData_re1(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), I2=0.2) 
+#' @export
 
 generateData_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
   
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
-	 resref<-res2ref_cpd[,sqrt(res2)];
+	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
-  muj<-Rj*rnorm(M, 0, tau2)
+  muj<-Rj*rnorm(M, 0, sqrt(tau2))
   k<-length(n)
   res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
   sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
-  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
   S2j<-sapply(1:M, function(j){
     ((k-1)*sum(1/sjk2[[j]]))/(sum(1/sjk2[[j]])^2 - sum(1/sjk2[[j]]^2))
   })
@@ -142,13 +220,19 @@ generateData_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
     rnorm(k, muj[j], sd=sqrt(omega2j[j])) 
   })
   
-  betaj<-lapply(1:M, function(j){
+  betajk<-lapply(1:M, function(j){
     rnorm(k, etajk[[j]], sd=sqrt(sjk2[[j]]))
   })
   
-  meta.z<-sapply(1:length(betaj), function(j){
-    sum(betaj[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
+  meta.z<-sapply(1:length(betajk), function(j){
+    sum(betajk[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
+
+
+  betajk<-matrix(unlist(betajk), ncol=k, byrow=TRUE)
+  sjk2<-matrix(unlist(sjk2), ncol=k, byrow=TRUE)
+  etajk<-matrix(unlist(etajk), ncol=k, byrow=TRUE)
+
   return(list(betajk=betajk,
               sjk2=sjk2,
               meta.z=meta.z, 
@@ -156,23 +240,42 @@ generateData_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
               omega2j=omega2j,
               S2j=S2j,
               Rj=Rj, 
-              Ojk=Ojk,
               muj=muj))
 }
 
-### only heterogeneity under the alternative
+#' Simulate summary statistics according to the Han and Eskin's RE2 model.  (Heterogeneity only when the population mean effect is non-zero)
+#' @param M number of SNPs for which to simulate summary stats.
+#' @param p proportion of SNPs with real non-zero effects.
+#' @param tau2 variance of real associated non-zero SNPs.
+#' @param lambda proportion of NON-outlier studies for non-replicable SNPs. 
+#' @param n vector of sample sizes from the contributing studies. 
+#' @param alpha variance inflation factor of outlier studies.
+#' @param resref an optional vector of residual variances to sample from (with replacement) 
+#'   when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
+#' @return 
+#'  A list containing:
+#'  An Mxk matrix of effect size estimates \code{betajk}, 
+#'  An Mxk matrix of effect size estimate  variances \code{sjk2}, 
+#'  M-length vector inverse-variance weighted meta-analysis z-scores \code{meta.z}, 
+#'  an M-length binary vector indicating real / non-real effect at each SNP \code{Rj},
+#'  an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
+#'  an Mxk matrix of the true study-level effects \code{etajk}
+#'  an M-length vector of the variance of the study-level effects around the SNP's population level effect \code{omega2j}
+#' @examples
+#' generateData_re2(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), I2=0.2) 
+#' @export
+
 generateData_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
   
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
-	 resref<-res2ref_cpd[,sqrt(res2)];
+	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
-  muj<-Rj*rnorm(M, 0, tau2)
+  muj<-Rj*rnorm(M, 0, sqrt(tau2))
   k<-length(n)
   res.sd<-lapply(1:M, function(j){ sample(resref, k, replace = TRUE) })
   sjk2<-lapply(1:M, function(j){res.sd[[j]]^2 / (n)})
-  Ojk<-lapply(1:M, function(j){rbinom(k, size=1, prob=1)})
   S2j<-sapply(1:M, function(j){
     ((k-1)*sum(1/sjk2[[j]]))/(sum(1/sjk2[[j]])^2 - sum(1/sjk2[[j]]^2))
   })
@@ -191,6 +294,12 @@ generateData_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
   meta.z<-sapply(1:length(betajk), function(j){
     sum(betajk[[j]]/sjk2[[j]]) / sqrt(sum(1/sjk2[[j]]))
   })
+
+
+  betajk<-matrix(unlist(betajk), ncol=k, byrow=TRUE)
+  sjk2<-matrix(unlist(sjk2), ncol=k, byrow=TRUE)
+  etajk<-matrix(unlist(etajk), ncol=k, byrow=TRUE)
+  
   return(list(betajk=betajk,
               sjk2=sjk2,
               meta.z=meta.z, 
@@ -198,7 +307,6 @@ generateData_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
               omega2j=omega2j,
               S2j=S2j,
               Rj=Rj, 
-              Ojk=Ojk,
               muj=muj))
 }
 
@@ -236,7 +344,21 @@ generateData_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
 #maxIter=10^4L
 
 
-
+#' Fit the MAMBA model.
+#' @param betajk Mxk matrix of effect size estimates, where row j corresponds to SNP j, and column k corresponds to study k.  Missing values can be represented with NA.
+#' @param sjk2 Mxk matrix of effect size estimate variances, where row j corresponds to SNP j, and column k corresponds to study k.  Missing values can be represented with NA.
+#' @param p initial value for EM algorithm, for the proportion of non-zero SNPs
+#' @param lambda initial value for EM algorithm, for the proportion of non-replicable SNPs which are well behaved, or non-outliers.
+#' @param tau2 initial value for EM algorithm, for the variance of replicable non-zero effect SNPs.
+#' @param alpha initial value for EM algorithm, for the variance inflation of outlier summary statistics at non-replicable SNPs.
+#' @param rel.eps threshold for when to end EM algorithm. rel.eps = (ll[i] - ll[i-1])/ll[i], where ll[i] is the log-likelihood at iteration i.
+#' @param snpids an optional vector of SNP id names.  If not provided, the ID's will be 1:M, corresponding to the order of the matrix betajk.
+#' @param maxIter maximum # of EM iterations.
+#' @return
+#' @examples 
+#'   d<-generateData_mamba()
+#'   mod<-mamba(betajk=d$betajk, sjk2=d$sjk2)
+#' @export 
 
 
 mamba<-function(betajk, sjk2, 
@@ -250,6 +372,7 @@ mamba<-function(betajk, sjk2,
                    verbose=1,
                    snpids=NA,
                    maxIter=10^4L){
+
   betajk<-as.matrix(betajk)
   sjk2<-as.matrix(sjk2)
 
@@ -286,6 +409,7 @@ mamba<-function(betajk, sjk2,
      betajk[j,infL[[j]]]<-NA
    }
  }
+
 ### Identify indices of studies with non-missing summary stats at each SNP
   mis.inds<-mclapply(1:nrow(sjk2), function(j){
     which(!is.na(sjk2[j,]))
@@ -317,7 +441,7 @@ mamba<-function(betajk, sjk2,
   for(iter in 1:(maxIter)){
     
     deltajk<- mclapply(1:nrow(betajk), function(j){
-      deltis(betajk_j=betajk[j,], sjk2_j=sjk2[j,], alpha=alpha, lambda=lambda)
+	mamba:::deltis(betajk_j=betajk[j,], sjk2_j=sjk2[j,], alpha=alpha, lambda=lambda)
     })
     deltajk<-matrix(unlist(deltajk), ncol=MM, byrow=FALSE)
     
@@ -333,13 +457,13 @@ mamba<-function(betajk, sjk2,
     }
     if(iter==1){
       llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
-        llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], 
+        mamba:::llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], 
 		sjk2_j=sjk2[j,mis.inds[[j]]], 
 		tau2inv = 1/tau2)
       }, mc.cores=parcores)) - (k_j/2)*log(2*pi)
       
       llbR0<-unlist( mclapply(1:nrow(betajk), function(j){
-        llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], 
+        mamba:::llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], 
 		sjk2_j = sjk2[j,mis.inds[[j]]], 
 		alpha = alpha, 
 		lambda=lambda)
@@ -347,7 +471,7 @@ mamba<-function(betajk, sjk2,
     }
     
     gammaj<-unlist(mclapply(1:MM, function(j){
-      gam<- p*exp(llbR1[j])/(exp(logsumexp(c(log(p) + llbR1[j], log(1-p) + llbR0[j]))))
+      gam<- p*exp(llbR1[j])/(exp(mamba:::logsumexp(c(log(p) + llbR1[j], log(1-p) + llbR0[j]))))
       if(is.na(gam)){
         m<-which.max(c(log(1-p) + llbR0[j],
                        log(p) + llbR1[j]))                      
@@ -403,13 +527,13 @@ mamba<-function(betajk, sjk2,
     }
     
     llbR1<-unlist(mclapply(1:nrow(betajk), function(j){
-      llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], 
+	mamba:::llbR1_j(betajk_j = betajk[j,mis.inds[[j]]], 
 	      sjk2_j=sjk2[j,mis.inds[[j]]], 
 	      tau2inv = 1/tau2)
     }, mc.cores=parcores)) - (k_j/2)*log(2*pi)
     
     llbR0<-unlist( mclapply(1:nrow(betajk), function(j){
-      llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], 
+	    mamba:::llbR0_j(betajk_j = betajk[j,mis.inds[[j]]], 
 	      sjk2_j = sjk2[j,mis.inds[[j]]], 
 	      alpha = alpha, 
 	      lambda=lambda)
@@ -417,7 +541,7 @@ mamba<-function(betajk, sjk2,
     
     
     ll[iter]<-sum(unlist(mclapply(1:MM, function(j){
-      logsumexp(c(log(p) + llbR1[j], log(1-p) + llbR0[j]))
+	mamba:::logsumexp(c(log(p) + llbR1[j], log(1-p) + llbR0[j]))
     }, mc.cores = parcores)))
     
     if(iter > 1){
@@ -449,13 +573,13 @@ mamba<-function(betajk, sjk2,
   se.hat<-unlist(mclapply(1:nrow(betajk), function(j){
     sqrt(1/(sum(1/sjk2[j,mis.inds[[j]]]) + 1/tau2))
   }, mc.cores = parcores))
-  outliermat<-data.table(snp=1:ncol(deltajk),
+  outliermat<-data.table::data.table(snp=1:ncol(deltajk),
                          t(deltajk))
-  colnames(outliermat)[2:ncol(outliermat)]<-paste0("deltai_",1:dim(deltajk)[1])
+  colnames(outliermat)[2:ncol(outliermat)]<-paste0("deltaj_",1:dim(deltajk)[1])
   outliermat[,gammaj:=gammaj]
   outlierprobs<-outliermat[,#(paste0("outlier_prob", 1:dim(deltajk)[1])):=
                            lapply(.SD, function(x){(1-gammaj)*(1-x)}),
-                           .SDcols=paste0("deltai_",1:dim(deltajk)[1]), by=.(snp)]
+                           .SDcols=paste0("deltaj_",1:dim(deltajk)[1]), by=.(snp)]
   colnames(outlierprobs)[2:ncol(outlierprobs)]<-paste0("outlier_prob", 1:dim(deltajk)[1])
   # if(!is.null(colnames(betajk))){
   #   dnames<-gsub("beta.*\\_","",colnames(betajk))

@@ -39,7 +39,6 @@ NumericVector llb0_ab(double betajk, double sjk2, double lambda, double alpha) {
 } 
 
 
-
 // [[Rcpp::export]]
 double llbR0_j(NumericVector betajk_j, NumericVector sjk2_j,
                double lambda, double alpha) {
