@@ -27,7 +27,9 @@ For SNPs with low PPR, the model also estimates a posterior probability that a p
 
 
 ## Analysis Pipeline 
+
   ** add real data examples with preprocessing **
+
 **Step 0**: First perform a fixed-effect GWA meta-analysis to identify loci of interest with suggestive evidence of association (For example, could use a threshold such as *p < 1\times 10^-5* 
 
 **Step 1a**: Prune variants with suggestive evidence of association using the clumping procedure implemented in Plink v1.9.
