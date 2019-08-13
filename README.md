@@ -1,5 +1,5 @@
 # MAMBA 
-A **M**eta-**A**analysis **M**odel **B**ased **A**ssessment of Replicability for genome-wide association studies.
+A **M**eta-**A**nalysis **M**odel **B**ased **A**ssessment of Replicability for genome-wide association studies.
 
 ## Installation
 
