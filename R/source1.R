@@ -521,7 +521,7 @@ mamba<-function(betajk, sjk2,
     if(verbose > 0){
       print("m step finished.")
       print(paste0("p=", round(p, 3), 
-		   " lambda=", round(f, 3), 
+		   " lambda=", round(lambda, 3), 
 		   " tau2=", round(tau2, 8), 
 		   " alpha=", round(alpha, 3)))
     }
