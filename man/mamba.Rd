@@ -31,6 +31,6 @@ mamba(betajk, sjk2, parcores = 1, p = 0.003, lambda = 0.96,
 Fit the MAMBA model.
 }
 \examples{
-  d<-generateData_mamba()
+  d<-generate_data_mamba()
   mod<-mamba(betajk=d$betajk, sjk2=d$sjk2)
 }

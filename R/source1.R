@@ -28,11 +28,11 @@
 #'  an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
 #'  Binary matrix \code{Ojk} indicating whether study was normal(Ojk=1) or outlier (Ojk=0).
 #' @examples
-#' generateData_mamba(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), lambda=0.975, alpha=15) 
+#' generate_data_mamba(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), lambda=0.975, alpha=15) 
 #' @export
 
 
-generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10), 
+generate_data_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10), 
 			     lambda=0.975, alpha=5){
 
   if(missing(resref)){
@@ -81,11 +81,11 @@ generateData_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(
 #'  an M-length binary vector indicating real / non-real effect at each SNP \code{Rj},
 #'  an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
 #' @examples
-#' generateData_fe(M=100, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)) 
+#' generate_data_fe(M=100, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)) 
 #' @export
 
 
-generateData_fe<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
+generate_data_fe<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
   
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
@@ -123,18 +123,20 @@ generateData_fe<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*
 #'   when generating the standard errors for the summary stats.  Default is NULL, in which case the residual variances calculated from a Cigarretes Per Day GWAS (Liu, Jiang 2019)  are used.
 #' @return
 #'  A list containing:
-#'  An Mxk matrix of effect size estimates \code{betajk}, 
-#'  An Mxk matrix of effect size estimate  variances \code{sjk2}, 
-#'  M-length vector inverse-variance weighted meta-analysis z-scores \code{meta.z}, 
-#'  an M-length binary vector indicating real / non-real effect at each SNP \code{Rj},
-#'  an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
-#'  an M-length vector indicating the number of studies at each SNP with non-zero effects.
-#'  an Mxk binary matrix indicating which studies at which SNP had non-zero effects.
+#'  \itemize{
+#'    \item An Mxk matrix of effect size estimates \code{betajk}, 
+#'    \item An Mxk matrix of effect size estimate  variances \code{sjk2}, 
+#'     \item M-length vector inverse-variance weighted meta-analysis z-scores \code{meta.z}, 
+#'     \item an M-length binary vector indicating real / non-real effect at each SNP \code{Rj},
+#'  \item an M-length binary vector indicating true effect-size at each SNP \code{muj}.  
+#'  \item an M-length vector indicating the number of studies at each SNP with non-zero effects .
+#'  \item an Mxk binary matrix indicating which studies at which SNP had non-zero effects.
+#' }
 #' @examples
-#' generateData_mamba(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), lambda=0.975, alpha=15) 
+#' generate_data_mamba(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), lambda=0.975, alpha=15) 
 #' @export
 
-generateData_be<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
+generate_data_be<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
 	 resref<-sqrt(res2ref_cpd$res2);
@@ -196,10 +198,10 @@ generateData_be<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*
 #'  an Mxk matrix of the true study-level effects \code{etajk}
 #'  an M-length vector of the variance of the study-level effects around the SNP's population level effect \code{omega2j}
 #' @examples
-#'   generateData_re1(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), I2=0.2) 
+#'   generate_data_re1(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), I2=0.2) 
 #' @export
 
-generateData_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
+generate_data_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
   
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
@@ -262,10 +264,10 @@ generateData_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
 #'  an Mxk matrix of the true study-level effects \code{etajk}
 #'  an M-length vector of the variance of the study-level effects around the SNP's population level effect \code{omega2j}
 #' @examples
-#' generateData_re2(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), I2=0.2) 
+#' generate_data_re2(M=100, p=0.01, tau2=2.5e-4, n=rep(10^4, 10), I2=0.2) 
 #' @export
 
-generateData_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
+generate_data_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
   
   if(missing(resref)){
 	 data(res2ref_cpd, package="emfuncs",envir=environment())
@@ -310,7 +312,7 @@ generateData_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
               muj=muj))
 }
 
-#d<-generateData_mamba()
+#d<-generate_data_mamba()
 #betajk<-matrix(unlist(d$betajk),
 #		byrow=TRUE,
 #		nrow=length(d$betajk))
@@ -356,7 +358,7 @@ generateData_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
 #' @param maxIter maximum # of EM iterations.
 #' @return
 #' @examples 
-#'   d<-generateData_mamba()
+#'   d<-generate_data_mamba()
 #'   mod<-mamba(betajk=d$betajk, sjk2=d$sjk2)
 #' @export 
 
@@ -615,7 +617,7 @@ getpvals<-function(mod,
   
   pdat<-nullMod<-list()
   for(j in 1:nModels){
-    pdat[[j]]<-generateDataS2(model=mod, sjk2=s2, Mnull=nullSNPsPerModel)
+    pdat[[j]]<-generate_data_S2(model=mod, sjk2=s2, Mnull=nullSNPsPerModel)
     nullMod[[j]]<-em_std_f(pdat[[j]]$betajk, pdat[[j]]$sjk2_sample, 
                            p=mod$p, lambda=mod$lambda, 
                            alpha=mod$alpha, tau2=mod$tau2,
@@ -658,7 +660,7 @@ getpvals<-function(mod,
 }
 
 
-generateDataS2<-function(model, sjk2, Mnull=1000){
+generate_data_S2<-function(model, sjk2, Mnull=1000){
   
   zeroL<-mclapply(1:nrow(sjk2), function(j){
     which(sjk2[j,]==0)
