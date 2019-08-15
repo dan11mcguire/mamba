@@ -12,4 +12,5 @@ Depends: TMB, RcppEigen, data.table
 LinkingTo: TMB, RcppEigen, Rcpp
 NeedsCompilation: yes
 Packaged: 2019-01-17 02:59:21 UTC; danno
+LazyData: true
 RoxygenNote: 6.1.1
