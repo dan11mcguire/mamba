@@ -36,7 +36,7 @@ generate_data_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep
 			     lambda=0.975, alpha=5){
 
   if(missing(resref)){
-	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 data(res2ref_cpd, package="mamba",envir=environment())
 	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
@@ -88,7 +88,7 @@ generate_data_mamba<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep
 generate_data_fe<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
   
   if(missing(resref)){
-	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 data(res2ref_cpd, package="mamba",envir=environment())
 	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
@@ -138,7 +138,7 @@ generate_data_fe<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
 
 generate_data_be<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10)){
   if(missing(resref)){
-	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 data(res2ref_cpd, package="mamba",envir=environment())
 	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
@@ -204,7 +204,7 @@ generate_data_be<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50
 generate_data_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
   
   if(missing(resref)){
-	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 data(res2ref_cpd, package="mamba",envir=environment())
 	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
@@ -270,7 +270,7 @@ generate_data_re1<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(5
 generate_data_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(50*10^3,10),I2=0.3){
   
   if(missing(resref)){
-	 data(res2ref_cpd, package="emfuncs",envir=environment())
+	 data(res2ref_cpd, package="mamba",envir=environment())
 	 resref<-sqrt(res2ref_cpd$res2);
    } 
   Rj<-rbinom(M, size=1, prob=p)
@@ -347,7 +347,7 @@ generate_data_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(5
 
 
 #' Fit the MAMBA model.
-#' @param betajk Mxk matrix of effect size estimates, where row j corresponds to SNP j, and column k corresponds to study k.  Missing values can be represented with NA.
+#' @param betajk Mxk matrix of effect size estimates, where row j corresponds to j-th SNP, and column k corresponds to k-th study .  Missing values can be represented with NA.
 #' @param sjk2 Mxk matrix of effect size estimate variances, where row j corresponds to SNP j, and column k corresponds to study k.  Missing values can be represented with NA.
 #' @param p initial value for EM algorithm, for the proportion of non-zero SNPs
 #' @param lambda initial value for EM algorithm, for the proportion of non-replicable SNPs which are well behaved, or non-outliers.
@@ -577,23 +577,24 @@ mamba<-function(betajk, sjk2,
   }, mc.cores = parcores))
   outliermat<-data.table::data.table(snp=1:ncol(deltajk),
                          t(deltajk))
-  colnames(outliermat)[2:ncol(outliermat)]<-paste0("deltaj_",1:dim(deltajk)[1])
-  outliermat[,gammaj:=gammaj]
-  outlierprobs<-outliermat[,#(paste0("outlier_prob", 1:dim(deltajk)[1])):=
-                           lapply(.SD, function(x){(1-gammaj)*(1-x)}),
-                           .SDcols=paste0("deltaj_",1:dim(deltajk)[1]), by=.(snp)]
-  colnames(outlierprobs)[2:ncol(outlierprobs)]<-paste0("outlier_prob", 1:dim(deltajk)[1])
+  outliermat<-outliermat[,lapply(.SD, function(x) 1-x),.SDcols=paste0("V", 1:nrow(deltajk)),by=snp]
+  colnames(outliermat)[2:ncol(outliermat)]<-paste0("Oj_",1:dim(deltajk)[1])
+  outliermat[,ppr:=gammaj]
+  #outlierprobs<-outliermat[,#(paste0("outlier_prob", 1:dim(deltajk)[1])):=
+  #                         lapply(.SD, function(x){(1-gammaj)*(1-x)}),
+  #                         .SDcols=paste0("deltaj_",1:dim(deltajk)[1]), by=.(snp)]
+  #colnames(outlierprobs)[2:ncol(outlierprobs)]<-paste0("outlier_prob", 1:dim(deltajk)[1])
   # if(!is.null(colnames(betajk))){
   #   dnames<-gsub("beta.*\\_","",colnames(betajk))
   #   
   # }
   if(!is.na(snpids) && length(snpids)==nrow(outliermat)) {
     outliermat[,snp:=snpids]
-    outlierprobs[,snp:=snpids]
+  #  outlierprobs[,snp:=snpids]
   }
   return(list(ll=ll,
               p=p,
-              gammaj=gammaj,
+              ppr=gammaj,
               alpha=alpha,
               lambda=lambda,
               tau2=tau2, 
