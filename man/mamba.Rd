@@ -9,7 +9,7 @@ mamba(betajk, sjk2, parcores = 1, p = 0.003, lambda = 0.96,
   snpids = NA, maxIter = 10^4L)
 }
 \arguments{
-\item{betajk}{Mxk matrix of effect size estimates, where row j corresponds to SNP j, and column k corresponds to study k.  Missing values can be represented with NA.}
+\item{betajk}{Mxk matrix of effect size estimates, where row j corresponds to j-th SNP, and column k corresponds to k-th study .  Missing values can be represented with NA.}
 
 \item{sjk2}{Mxk matrix of effect size estimate variances, where row j corresponds to SNP j, and column k corresponds to study k.  Missing values can be represented with NA.}
 
