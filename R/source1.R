@@ -485,7 +485,9 @@ mamba<-function(betajk, sjk2,
       print(data.table(gammaj)[order(-gammaj)])
     }
     
-    print("e step finished.")
+    if(verbose > 0){ 
+      print("e step finished.")
+    } 
     
     if(sum(is.na(gammaj)) > 0) break
     if(sum(1-gammaj)==0) break
@@ -608,44 +610,76 @@ mamba<-function(betajk, sjk2,
                                 rel.eps=((ll-shift(ll,1))/ll))]))
 }
 
-getpvals<-function(mod, 
+
+#s2<-sjk2[,-c("chr", "bp", "ref", "alt", "snp"),with=F]
+#total_null_scores<-10^6
+#out<-"mamba_pvals/chr14"
+#system("mkdir mamba_pvals/")
+
+get_null_scores<-function(model, 
 		   s2, 
-		   nModels, 
-		   nullSNPsPerModel, 
-		   numcores=parcores,
+		   total_null_scores, 
+                   out,
+		   parcores=1,
 		   save_all=FALSE,
-                   out){
-  
+                   clean_any_existing_scores=FALSE,
+		   nullSNPsPerModel=NULL 
+                   ){
+ 
+  if(clean_any_existing_scores){
+    outd<-strsplit(out, "\\/")[[1]]
+    slsh<-ifelse(grepl("\\/$", out), "/", "")
+    pref<-outd[length(outd)]
+    outdir<-strsplit(out, pref)[[1]][1]
+    rmfiles<-grep(paste0(pref, slsh, ".nullscores.*"), list.files(outdir),value=T)
+    if(length(rmfiles) > 0){
+     for(f in rmfiles){
+        system(paste0("rm ", outdir, f))
+      } 
+    }
+  }
+  if(missing(nullSNPsPerModel)){
+    nullSNPsPerModel<-ceiling(nrow(s2)*(1-model$p))
+  } 
+  nModels<- ceiling( total_null_scores / nullSNPsPerModel)
+
   pdat<-nullMod<-list()
+  print(paste0("Fitting ", nModels, 
+               " models to generate approximately ", total_null_scores ," non-replicable SNPs."))
+
   for(j in 1:nModels){
-    pdat[[j]]<-generate_data_S2(model=mod, sjk2=s2, Mnull=nullSNPsPerModel)
-    nullMod[[j]]<-em_std_f(pdat[[j]]$betajk, pdat[[j]]$sjk2_sample, 
-                           p=mod$p, lambda=mod$lambda, 
-                           alpha=mod$alpha, tau2=mod$tau2,
-                           parcores=numcores,verbose = TRUE)
-    nullscoresj<-nullMod[[j]]$gammaj
-    nullRij<-pdat[[j]]$Ri
+    pdat[[j]]<-mamba:::generate_data_s2(model, s2, Mnull=nullSNPsPerModel)
+    nullMod[[j]]<-mamba::mamba(pdat[[j]]$betajk, 
+                        pdat[[j]]$s2_sample, 
+                        parcores,
+                        p=mod$p, 
+                        lambda=mod$lambda, 
+                        alpha=mod$alpha, 
+                        tau2=mod$tau2,
+                        verbose =0)
+    nullscoresj<-nullMod[[j]]$ppr
+    nullRij<-pdat[[j]]$Rj
     nullscoresj<-nullscoresj[nullRij==0] 
     fwrite(data.table(nullscoresj),
-           file=paste0(out, "nullscores.",seed,".txt"),
+           file=paste0(out, ".nullscores.",pdat[[j]]$seed,".txt"),
            col.names = FALSE)
    
     system(paste0("cat ",
-		  paste0(out, "nullscores.",seed,".txt")," >> ",
-		  paste0(out, "nullscores.txt")))
+		  paste0(out, ".nullscores.",pdat[[j]]$seed,".txt")," >> ",
+		  paste0(out, ".nullscores.txt")))
     system(paste0(" echo $(wc -l ", 
-		  paste0(out, "nullscores.txt) seed ",seed, " >> ",
-			 paste0(out, "nullscores.log"))))
+		  paste0(out, ".nullscores.txt) seed ",pdat[[j]]$seed, " >> ",
+			 paste0(out, ".nullscores.log"))))
     
-    system(paste0("rm ",paste0(out, "nullscores.",seed,".txt")))
+    system(paste0("rm ",paste0(out, ".nullscores.",pdat[[j]]$seed,".txt")))
     
     print(paste0("Model ",j, " of ", nModels, " complete.")) 
   }
-  nullscores<-unlist(lapply(nullMod, "[[", "gammaj"))
-  nullRi<-unlist(lapply(pdat, "[[", "Ri"))
+  nullscores<-unlist(lapply(nullMod, "[[", "ppr"))
+  nullRi<-unlist(lapply(pdat, "[[", "Rj"))
   nullscores<-nullscores[nullRi==0]
   
-  pvals<-sapply(mod$gammaj, function(score){
+  pvals<-sapply(mod$ppr, function(score){
     mean(score < nullscores)
   })
   if(save_all){
@@ -661,65 +695,82 @@ getpvals<-function(mod,
 }
 
 
-generate_data_S2<-function(model, sjk2, Mnull=1000){
-  
-  zeroL<-mclapply(1:nrow(sjk2), function(j){
-    which(sjk2[j,]==0)
+## Mnull<-ceiling(nrow(s2)*(1-model$p))
+## s2<-as.matrix(sjk2[,-c("chr", "bp", "ref", "alt","snp"),with=F])
+## model<-mod
+generate_data_s2<-function(model, s2, parcores=1, seed=NULL, Mnull=NULL){
+
+  if(missing(Mnull)){
+    Mnull<-ceiling(nrow(s2)*(1-model$p))
+  }
+  if(missing(seed)){
+   seed<-sample.int(10^6,1)
+  }
+ 
+  s2<-as.matrix(s2) 
+  zeroL<-mclapply(1:nrow(s2), function(j){
+    which(s2[j,]==0)
   }, mc.cores = parcores)
   chk<- which(sapply(zeroL, length) > 0)
   if(length(chk) > 0){
     for(i in chk){
-      sjk2[j,zeroL[[j]]]<-NA
+      s2[j,zeroL[[j]]]<-NA
     }
   }
-  infL<-mclapply(1:nrow(sjk2), function(j){
-    which(is.infinite(sjk2[j,]))
+  infL<-mclapply(1:nrow(s2), function(j){
+    which(is.infinite(s2[j,]))
   }, mc.cores = parcores)
   chk<- which(sapply(infL, length) > 0)
   if(length(chk) > 0){
     for(i in chk){
-      sjk2[j,infL[[j]]]<-NA
+      s2[j,infL[[j]]]<-NA
     }
   }
+
   p<-model$p
-  f<-model$f
+  lambda<-model$lambda
   tau2<-model$tau2
   alpha<-model$alpha
+  
+
   M<-ceiling(Mnull/(1-p))
-  sample_inds<-sample(nrow(sjk2),M,replace = TRUE)
-  sjk2_sample<-sjk2[sample_inds,]
-  mis.inds<-lapply(1:nrow(sjk2_sample), function(j){
-    which(!is.na(sjk2_sample[j,]))
+  sample_inds<-sample(nrow(s2),M,replace = TRUE)
+  s2_sample<-s2[sample_inds,]
+  mis.inds<-lapply(1:nrow(s2_sample), function(j){
+    which(!is.na(s2_sample[j,]))
   })
-  Ri<-rbinom(M, size=1, prob=p)
-  mu<-Ri*rnorm(M, 0, sqrt(tau2))
-  k_j<-sapply(1:nrow(sjk2_sample), function(j){sum(!is.na(sjk2_sample[j,]))})
-  sjk2<-lapply(1:M, function(j){sjk2_sample[j,]})
+  Rj<-rbinom(M, size=1, prob=p)
+  mu<-Rj*rnorm(M, 0, sqrt(tau2))
+  k_j<-sapply(1:nrow(s2_sample), function(j){sum(!is.na(s2_sample[j,]))})
+  sj2<-lapply(1:M, function(j){s2_sample[j,]})
   Ojk<-lapply(1:M, function(j){
-    vec<-rep(NA, dim(sjk2)[2])
-    vec[mis.inds[[j]]]<-rbinom(k_j[j], size=1, prob=f)
+    vec<-rep(NA, dim(s2)[2])
+    vec[mis.inds[[j]]]<-rbinom(k_j[j], size=1, prob=lambda)
     vec
   })
   
   betaj<-lapply(1:M, function(j){
-    vec<-rep(NA, dim(sjk2)[2])
+    vec<-rep(NA, dim(s2)[2])
     vec[mis.inds[[j]]]<-
-      Ri[j] * rnorm(k_j[j], mu[j], sd=sqrt(sjk2[[j]][mis.inds[[j]]])) + 
-      (1-Ri[j]) * ((Ojk[[j]][mis.inds[[j]]])*rnorm(k_j[j], 0, sqrt(sjk2[[j]][mis.inds[[j]]])) + 
-                     (1-Ojk[[j]][mis.inds[[j]]])*rnorm(k_j[j], 0, sqrt(alpha)*sqrt(sjk2[[j]][mis.inds[[j]]])))
+      Rj[j] * rnorm(k_j[j], mu[j], sd=sqrt(sj2[[j]][mis.inds[[j]]])) + 
+      (1-Rj[j]) * ((Ojk[[j]][mis.inds[[j]]])*rnorm(k_j[j], 0, sqrt(sj2[[j]][mis.inds[[j]]])) + 
+                     (1-Ojk[[j]][mis.inds[[j]]])*rnorm(k_j[j], 0, sqrt(alpha)*sqrt(sj2[[j]][mis.inds[[j]]])))
     
     vec
   })
   
   meta.z<-sapply(1:length(betaj), function(j){
-    sum(betaj[[j]][mis.inds[[j]]]/sjk2[[j]][mis.inds[[j]]]) / sqrt(sum(1/sjk2[[j]][mis.inds[[j]]]))
+    sum(betaj[[j]][mis.inds[[j]]]/sj2[[j]][mis.inds[[j]]]) / sqrt(sum(1/sj2[[j]][mis.inds[[j]]]))
   })
-  betajk<-matrix(unlist(betaj), ncol=dim(sjk2)[2], byrow=TRUE)
+  betajk<-matrix(unlist(betaj), ncol=dim(s2)[2], byrow=TRUE)
   return(list(betajk=betajk,
-              sjk2_sample=sjk2_sample,
+              s2_sample=s2_sample,
               sample_inds=sample_inds,
               meta.z=meta.z, 
               Rj=Rj, 
               Ojk=Ojk,
-              muj=muj))
+              muj=mu,
+              seed=seed))
 }
+
+
