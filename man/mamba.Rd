@@ -27,6 +27,9 @@ mamba(betajk, sjk2, parcores = 1, p = 0.003, lambda = 0.96,
 
 \item{maxIter}{maximum # of EM iterations.}
 }
+\value{
+A list containing
+}
 \description{
 Fit the MAMBA model.
 }

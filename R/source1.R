@@ -357,6 +357,7 @@ generate_data_re2<-function(M=50*10^3, p=0.01, tau2=2.5e-4, resref=NULL, n=rep(5
 #' @param snpids an optional vector of SNP id names.  If not provided, the ID's will be 1:M, corresponding to the order of the matrix betajk.
 #' @param maxIter maximum # of EM iterations.
 #' @return
+#'     A list containing 
 #' @examples 
 #'   d<-generate_data_mamba()
 #'   mod<-mamba(betajk=d$betajk, sjk2=d$sjk2)

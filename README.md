@@ -12,9 +12,9 @@ The MAMBA model is fit with the `mamba()` function, and takes as input a matrix 
 
 For a quick start, one could use 
 
-    d<-generateData_mamba()
+    d<-generate_data_mamba()
  
-To generate summary statistics according to the MAMBA model (SNPs are simulated independently).  The returned data `d$betajk` is a *M*x*K* matrix of effect size estimates, where *M* is the total number of SNPs and *K* is the total number of studies, with the *j*th row and *k*th column correspond to the effect size estimate of the *j*th SNP in the *k*th study.  Similarly, `d$sjk2` is a *M*x*k* matrix of the effect size estimate variances.  
+to generate summary statistics according to the MAMBA model (SNPs are simulated independently).  The returned data `d$betajk` is a *M*x*K* matrix of effect size estimates, where *M* is the total number of SNPs and *K* is the total number of studies, with the *j*th row and *k*th column correspond to the effect size estimate of the *j*th SNP in the *k*th study.  Similarly, `d$sjk2` is a *M*x*k* matrix of the effect size estimate variances.  
 
 The MAMBA model could then be fit by:
 
