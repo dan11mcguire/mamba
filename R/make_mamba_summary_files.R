@@ -92,6 +92,9 @@ af<-melt(d[,c("chr", "bp", "ref", "alt",grep("af_",names(d),value=TRUE)),with=FA
 naf<-merge(n,af,by=c("chr", "bp", "ref", "alt","cohort"))[!is.na(n)][!is.na(af)]
 bsnaf<-merge(bs, naf, by=c("chr", "bp", "ref", "alt","cohort"))
 
+#bsnaf[,b_std:=b*sqrt(2*af*(1-af))]
+#bsnaf[,s2_std:=s2*(2*af*(1-af))]
+#bs<-bsnaf[,`:=`(BETA=sum(b_std/s2_std)/sum(1/s2_std), SE=sqrt(1/sum(1/s2_std)),k=.N),by=.(chr,bp,ref,alt)] 
 
 bs<-bs[,.(BETA=sum(b/s2)/sum(1/s2), SE=sqrt(1/sum(1/s2)),k=.N),by=.(chr,bp,ref,alt)] 
  
