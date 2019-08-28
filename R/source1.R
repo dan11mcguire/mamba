@@ -602,7 +602,7 @@ mamba<-function(betajk, sjk2,
               se.hat=se.hat,
               post.means=mu.hat*gammaj,
               outliermat=outliermat,
-              outlierprobs=outlierprobs, 
+              #outlierprobs=outlierprobs, 
               time=end-strt,
               param_est_log=llMat[,`:=`(eps=ll-shift(ll,1),
                                 rel.eps=((ll-shift(ll,1))/ll))]))
