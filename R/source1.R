@@ -622,10 +622,14 @@ get_null_scores<-function(model,
 		   total_null_scores, 
                    out,
 		   parcores=1,
+                   seed=NULL,
 		   save_all=FALSE,
                    clean_any_existing_scores=FALSE,
 		   nullSNPsPerModel=NULL 
                    ){
+  
+  if(missing(seed)) seed<-sample.int(10^6)
+  set.seed(seed)
  
   if(clean_any_existing_scores){
     outd<-strsplit(out, "\\/")[[1]]
@@ -708,12 +712,14 @@ get_null_scores<-function(model,
    return(list(nullscores=nullscores,
                 nullRi=nullRi,
                 pdat=pdat,
-                nullMod=nullMod))
+                nullMod=nullMod,
+                seed=seed))
   } else{
  
    nullscores<-fread(paste0(out, ".nullscores.txt"),header=F)[,V1]
   
-    return(nullscores)
+    return(list(nullscores=nullscores,
+                seed=seed))
   }
 }
 
