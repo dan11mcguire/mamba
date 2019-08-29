@@ -85,7 +85,8 @@ datafiles<-paste0(datadir, "/", grep("study_.*assoc", list.files(datadir),value=
 fread(datafiles[1])[1:5] ### format of example summary statistic files 
 
 ## holdout the first dataset to assess replicability
-exmpl<-make_mamba_summary_files(summary_files=datafiles[-1], 
+discovery_datasets<-setdiff(datafiles, grep("study_1.assoc", datafiles, value=T))
+exmpl<-make_mamba_summary_files(summary_files=discovery_datasets, 
                                 standardize_beta_and_s2_datasets=TRUE,
                                 beta_name="betaj", s2_name="sj2")
 
