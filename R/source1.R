@@ -559,8 +559,8 @@ mamba<-function(betajk, sjk2,
    # convergence criteria # 
     if(iter >=2){
       if(verbose > 0){
-        print((ll[iter]-ll[iter-1])/ll[iter])
-        print((ll[iter]-ll[iter-1]))
+        print(paste0("relative ll increase: ", (ll[iter]-ll[iter-1])/ll[iter]))
+        print(paste0("ll increase: ", (ll[iter]-ll[iter-1])))
       }
       if(!is.na(ll[iter] - ll[iter-1])){
         if(((ll[iter] - ll[iter-1])/ll[iter] < rel.eps && ll[iter] - ll[iter-1] < 0.01) || 
