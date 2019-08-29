@@ -455,7 +455,7 @@ mamba<-function(betajk, sjk2,
       print("na's in deltajk")
       break
     }
-    if(verbose > 0){
+    if(verbose > 1){
       print("deltajk calculated.")
     }
     if(iter==1){
