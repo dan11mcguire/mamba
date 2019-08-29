@@ -639,15 +639,29 @@ get_null_scores<-function(model,
       } 
     }
   }
+
+
   if(missing(nullSNPsPerModel)){
     nullSNPsPerModel<-ceiling(nrow(s2)*(1-model$p))
   } 
-  nModels<- ceiling( total_null_scores / nullSNPsPerModel)
+
+  system(paste0("touch ", out, ".nullscores.txt")) 
+
+  total_score_count<-as.numeric(system(paste0("wc -l ", out, ".nullscores.txt| awk '{print $1}'"),
+                                       intern=T))
+
+  print(paste0(total_score_count, " scores already generated in ", out, ".nullscores.txt."))
+
+  stopifnot(total_score_count < total_null_scores) 
+    
+  nModels<- ceiling( (total_null_scores-total_score_count) / nullSNPsPerModel)
 
   pdat<-nullMod<-list()
   print(paste0("Fitting ", nModels, 
                " models to generate approximately ", total_null_scores ," non-replicable SNPs."))
 
+
+  stop=FALSE
   for(j in 1:nModels){
     pdat[[j]]<-mamba:::generate_data_s2(model, s2, Mnull=nullSNPsPerModel)
     nullMod[[j]]<-mamba::mamba(pdat[[j]]$betajk, 
@@ -675,23 +689,31 @@ get_null_scores<-function(model,
     system(paste0("rm ",paste0(out, ".nullscores.",pdat[[j]]$seed,".txt")))
     
     print(paste0("Model ",j, " of ", nModels, " complete.")) 
+
+    total_score_count<-system(paste0("wc -l ", out, ".nullscores.txt| awk '{print $1}'",intern=T))
+
+    if(as.numeric(total_score_count) > total_null_scores ) {
+      print(paste0(total_null_scores, " total_null_scores generated."))
+      stop=TRUE
+     }
+     if(stop) break
   }
+  
+  if(save_all){
+  
   nullscores<-unlist(lapply(nullMod, "[[", "ppr"))
   nullRi<-unlist(lapply(pdat, "[[", "Rj"))
   nullscores<-nullscores[nullRi==0]
-  
-  pvals<-sapply(mod$ppr, function(score){
-    mean(score < nullscores)
-  })
-  if(save_all){
-    return(list(pvals=pvals,
-                nullscores=nullscores,
+ 
+   return(list(nullscores=nullscores,
                 nullRi=nullRi,
                 pdat=pdat,
                 nullMod=nullMod))
   } else{
-    
-    return(list(nullscores=nullscores))
+ 
+   nullscores<-fread(paste0(out, ".nullscores.txt"),header=F)[,V1]
+  
+    return(nullscores)
   }
 }
 
