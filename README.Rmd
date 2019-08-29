@@ -274,7 +274,7 @@ For this short example, we settle for 1 million (10^6) scores.  With `clean_any_
 system("if [ ! -d mamba_pvals ]; then mkdir mamba_pvals/ ; fi ")
 null_scores<-mamba:::get_null_scores(model=mod, 
                                      s2=sjk2[,-c("chr", "bp", "ref", "alt", "snp"),with=F], 
-                                     total_null_scores=100000, 
+                                     total_null_scores=10^6, 
                                      out="mamba_pvals/chr14",
                                      clean_any_existing_scores=FALSE)
 
