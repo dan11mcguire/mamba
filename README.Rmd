@@ -40,7 +40,7 @@ knit_hooks$set(output = function(x, options) {
 # MAMBA 
 A **M**eta-**A**nalysis **M**odel **B**ased **A**ssessment of Replicability for genome-wide association studies.
 
-Goals for the MAMBA model is to identify loci which have non-zero replicable associations with a phenotype based on summary statistics from genome-wide association meta-analysis (GWAMA).  
+The main goal of the MAMBA model is to identify loci which have non-zero replicable associations with a phenotype based on summary statistics from genome-wide association meta-analysis (GWAMA).  
 
 ## Installation
 
@@ -98,6 +98,8 @@ rm(exmpl)
 ```
 `assoc` contains the meta-analysis results (in `plink` .assoc file format, with some additional columns) which can be passed directly to `plink` in step2.  
 
+https://www.cog-genomics.org/plink/1.9/formats
+
 ```{r}
 
 assoc[1:3] 
@@ -127,6 +129,7 @@ fwrite(assoc, file="ivw_met_chr14.tsv", sep="\t")
 ### Step 1a: Clumping GWAMA results 
 
 https://www.cog-genomics.org/plink/1.9/postproc#clump
+
 https://www.cog-genomics.org/plink/1.9/formats
 
 An example command for clumping meta-analysis results in plink is below:
@@ -221,10 +224,11 @@ mamba_snps[,mu_hat:=mod$mu.hat]
 
 ```
 
-Use the `mod$outliermat` object to identify the "most probable outlier" for for non-replicable SNPs.
+We can use the `mod$outliermat` object to identify the "most probable outlier study" for non-replicable SNPs.
 The columns in `mod$outliermat`  assess posterior probability of an outlier *given* that true SNP association is zero and non-replicable.  The number is only interpretable for SNPs with low PPR, where higher values indicate a summary statistic which dominated the meta-analysis result. 
 
 ```{r}
+mod$outliermat[ppr < 0.5][1:3]
 top_outlier<-melt(mod$outliermat, 
                   id.vars=c("ppr", "snp"), 
                   variable.factor=F,
@@ -237,7 +241,7 @@ mamba_snps<-merge(mamba_snps, top_outlier[,-c("ppr"),with=F], by.x="SNP", by.y="
 
 #### Estimate FDR from PPR
 
-Efron has written extensively on the connection between empirical bayes posterior probability and false discovery rates, for example here: 
+Dr. Brad Efron has written extensively on the connection between empirical bayes posterior probability and false discovery rates, for example here: 
 [Empirical Bayes Analysis of a Microarray Experiment](https://pdfs.semanticscholar.org/21b4/c0579e8c7398cfa2f5c476b659090fea9209.pdf) 
 
 Below we calculate an estimated FDR based on posterior probability (PPR) from the MAMBA model.
@@ -299,7 +303,7 @@ We can make some further comparisons with the initial fixed effects result with 
 
 ```{r}
 ### attach held-out dataset to results
-holdout<-fread(datafiles[1])
+holdout<-fread(paste0(datadir, "/study_1.assoc"))
 
 mamba_snps<- merge(mamba_snps, 
              holdout[,.(snp=paste0(chr, ":", bp, "_", ref, "_", alt), beta_rep=betaj, p_rep=p)], 
