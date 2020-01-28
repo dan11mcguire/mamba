@@ -397,7 +397,7 @@ mamba<-function(betajk, sjk2,
  }, mc.cores = parcores)
  chk<- which(sapply(infL, length) > 0)
  if(length(chk) > 0){
-   for(i in chk){
+   for(j in chk){
      sjk2[j,infL[[j]]]<-NA
      betajk[j,infL[[j]]]<-NA
    }
@@ -407,7 +407,7 @@ mamba<-function(betajk, sjk2,
  }, mc.cores = parcores)
  chk<- which(sapply(infL, length) > 0)
  if(length(chk) > 0){
-   for(i in chk){
+   for(j in chk){
      sjk2[j,infL[[j]]]<-NA
      betajk[j,infL[[j]]]<-NA
    }
