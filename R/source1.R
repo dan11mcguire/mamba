@@ -374,7 +374,8 @@ mamba<-function(betajk, sjk2,
                    rel.eps=1e-8,
                    verbose=1,
                    snpids=NA,
-                   maxIter=10^4L){
+                   maxIter=10^4L,
+		   minIter=100){
 
   betajk<-as.matrix(betajk)
   sjk2<-as.matrix(sjk2)
@@ -564,8 +565,8 @@ mamba<-function(betajk, sjk2,
       }
       if(!is.na(ll[iter] - ll[iter-1])){
         if(((ll[iter] - ll[iter-1])/ll[iter] < rel.eps && ll[iter] - ll[iter-1] < 0.01) || 
-		((ll[iter]-ll[iter-1]) < 0.001 && iter > 100) || 
-		((ll[iter] - ll[iter-1])/ll[iter] < rel.eps && iter > 100)) break
+		((ll[iter]-ll[iter-1]) < 0.001 && iter > minIter) || 
+		((ll[iter] - ll[iter-1])/ll[iter] < rel.eps && iter > minIter)) break
       }
       #if(ll[iter] - ll[iter-1] < 0) break
     }
