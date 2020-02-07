@@ -2,7 +2,7 @@ Package: mamba
 Type: Package
 Title: MAMBA: Meta-analysis Model Based Assessment of Replicability 
 Version: 1.10
-Date: 2020-02-07
+Date: 2018-08-04
 Author: Dan McGuire 
 Maintainer: Dan McGuire <dmcguire2@pennstatehealth.psu.edu>
 Description: Calculate posterior probability of replicability for genome-wide association meta-analyses.
