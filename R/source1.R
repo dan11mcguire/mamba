@@ -618,8 +618,9 @@ mamba<-function(betajk, sjk2,
 #out<-"mamba_pvals/chr14"
 #system("mkdir mamba_pvals/")
 
-#s2<-sjk2[,-c("chr", "bp", "ref", "alt", "snp"),with=F]
+#s2<-sjk2
 #total_null_scores<-10^6
+# model<-mod
 get_null_scores<-function(model, 
 		   s2, 
 		   total_null_scores, 
@@ -631,7 +632,7 @@ get_null_scores<-function(model,
 		   nullSNPsPerModel=NULL 
                    ){
   
-  if(missing(seed)) seed<-sample.int(10^6)
+  if(missing(seed)) seed<-sample.int(10^6,1)
   set.seed(seed)
  
   if(clean_any_existing_scores){
@@ -745,7 +746,7 @@ generate_data_s2<-function(model, s2, parcores=1, seed=NULL, Mnull=NULL){
   }, mc.cores = parcores)
   chk<- which(sapply(zeroL, length) > 0)
   if(length(chk) > 0){
-    for(i in chk){
+    for(j in chk){
       s2[j,zeroL[[j]]]<-NA
     }
   }
@@ -754,7 +755,7 @@ generate_data_s2<-function(model, s2, parcores=1, seed=NULL, Mnull=NULL){
   }, mc.cores = parcores)
   chk<- which(sapply(infL, length) > 0)
   if(length(chk) > 0){
-    for(i in chk){
+    for(j in chk){
       s2[j,infL[[j]]]<-NA
     }
   }
