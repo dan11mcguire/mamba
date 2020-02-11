@@ -618,6 +618,8 @@ mamba<-function(betajk, sjk2,
 #out<-"mamba_pvals/chr14"
 #system("mkdir mamba_pvals/")
 
+#s2<-sjk2[,-c("chr", "bp", "ref", "alt", "snp"),with=F]
+#total_null_scores<-10^6
 get_null_scores<-function(model, 
 		   s2, 
 		   total_null_scores, 
@@ -672,10 +674,10 @@ get_null_scores<-function(model,
     nullMod[[j]]<-mamba::mamba(pdat[[j]]$betajk, 
                         pdat[[j]]$s2_sample, 
                         parcores,
-                        p=mod$p, 
-                        lambda=mod$lambda, 
-                        alpha=mod$alpha, 
-                        tau2=mod$tau2,
+                        p=model$p, 
+                        lambda=model$lambda, 
+                        alpha=model$alpha, 
+                        tau2=model$tau2,
                         verbose =0)
     nullscoresj<-nullMod[[j]]$ppr
     nullRij<-pdat[[j]]$Rj
