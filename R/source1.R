@@ -698,7 +698,7 @@ get_null_scores<-function(model,
     
     print(paste0("Model ",j, " of ", nModels, " complete.")) 
 
-    total_score_count<-system(paste0("wc -l ", out, ".nullscores.txt| awk '{print $1}'",intern=T))
+    total_score_count<-as.numeric(system(paste0("wc -l ", out, ".nullscores.txt| awk '{print $1}'"),intern=T))
 
     if(as.numeric(total_score_count) > total_null_scores ) {
       print(paste0(total_null_scores, " total_null_scores generated."))
