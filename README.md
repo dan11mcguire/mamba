@@ -4,6 +4,9 @@ Dan McGuire
 MAMBA
 =====
 
+
+[![DOI](https://zenodo.org/badge/181355920.svg)](https://zenodo.org/badge/latestdoi/181355920)
+
 A **M**eta-**A**nalysis **M**odel **B**ased **A**ssessment of Replicability for genome-wide association studies.
 
 The main goal of the MAMBA model is to identify loci which have non-zero replicable associations with a phenotype based on summary statistics from genome-wide association meta-analysis (GWAMA).
