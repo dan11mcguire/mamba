@@ -476,7 +476,7 @@ mamba<-function(betajk, sjk2,
     
     gammaj<-unlist(mclapply(1:MM, function(j){
       gam<- p*exp(llbR1[j])/(exp(mamba:::logsumexp(c(log(p) + llbR1[j], log(1-p) + llbR0[j]))))
-      if(is.na(gam)){
+      if(is.na(gam) | is.infinite(gam)){
         m<-which.max(c(log(1-p) + llbR0[j],
                        log(p) + llbR1[j]))                      
         gam<-(m-1)
